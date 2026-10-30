@@ -9,5 +9,6 @@ xhost +SI:localuser:sfplay >/dev/null  # let sfplay draw on your screen (X11, or
 pactl list modules short | grep -q module-native-protocol-tcp ||
   pactl load-module module-native-protocol-tcp port=4713 auth-ip-acl=127.0.0.1 auth-anonymous=1 >/dev/null ||
   echo "No sound: pactl could not share your audio."
+cd /  # sfplay may not be able to read your current folder; Wine warns "could not find DOS drive" then
 exec sudo -u sfplay env HOME=/home/sfplay WINEPREFIX=/home/sfplay/.wine WINEDEBUG=-all DISPLAY="${DISPLAY:?no display}" \
   PULSE_SERVER=tcp:127.0.0.1:4713 wine /home/sfplay/SoulframePrivate/sf-launch.exe

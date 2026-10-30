@@ -4,6 +4,6 @@ set -euo pipefail
 here=$(cd "$(dirname "$0")" && pwd)
 command -v sf-play >/dev/null || { echo "Run setup.sh first."; exit 1; }
 sudo -v  # the server needs root for ports 80 and 443; ask now, not in the middle of the server output
-(sleep 3 && sf-play) &
+(cd / && sleep 3 && sf-play) &  # from /: sfplay may not be able to read this folder
 # The server binds the ports as root, then drops back to you; no root-owned __pycache__ in the clone either.
 exec sudo PYTHONDONTWRITEBYTECODE=1 "$here/.venv/bin/python" "$here/tools/dummy_server.py"
