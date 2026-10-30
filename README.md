@@ -6,6 +6,18 @@ server instead of Digital Extremes' backend. Not affiliated with Digital Extreme
 No game files are in this repo: the game itself comes from your own install. `gamedata/` holds the package data the
 server needs (extracted from the game, via soulframe-pipeline).
 
+## Easiest: the app
+
+`SoulframePrivateServer.exe` (Windows) or `SoulframePrivateServer-x86_64.AppImage` (Linux) is one window: pick your
+Soulframe folder (any copy of build P16H6 with `Soulframe.x64.exe`; nothing is downloaded from Digital Extremes),
+click **Set up private copy** once, then **Play** (it starts the server too). Saves live in
+`%LOCALAPPDATA%\SoulframePrivateServer\data` / `~/.local/share/soulframe-private-server/data`.
+On Linux, setup installs Wine itself (Arch: enable `[multilib]` first); the AppImage may need `fuse2`.
+
+Build them: `powershell -ExecutionPolicy Bypass -File build.ps1` on Windows, `bash build.sh` on Linux (after
+`setup.cmd` / `setup.sh` once, for the toolchains). Output goes to `dist/`. From a clone without building:
+`pythonw tools/server_gui.pyw`.
+
 ## Setup, step by step
 
 Everyone runs the server on their own PC. You need Soulframe on build P16H6 (2026.10.08), about 13 GB free for a
