@@ -4,7 +4,8 @@
 # Your real game is only read (copied), never changed or started.
 # Usage: bash setup.sh [folder with Soulframe.x64.exe]     (asks for sudo)
 # Undo:  sudo systemctl disable --now sf-copy-firewall; sudo userdel -r sfplay;
-#        sudo rm /etc/sf-copy.nft /etc/systemd/system/sf-copy-firewall.service /usr/local/bin/sf-play
+#        sudo rm /etc/sf-copy.nft /etc/systemd/system/sf-copy-firewall.service /usr/local/bin/sf-play \
+#          /etc/sysctl.d/60-sf-server.conf /etc/sudoers.d/sf-play
 set -euo pipefail
 P16H6=3be7694b589a7e2ae92a53b3e26ed8c3bcfac8c34ff25d69045df374b35e4765  # Soulframe.x64.exe, build 2026.10.08.15.20
 [[ $EUID -eq 0 ]] || exec sudo bash "$0" "$@"
@@ -124,6 +125,13 @@ if sudo -u "$user" timeout 5 bash -c 'exec 3<>/dev/tcp/1.1.1.1/443' 2>/dev/null;
 fi
 
 install -m755 "$here/play.sh" /usr/local/bin/sf-play
+# For the GUI (server_gui.pyw / the AppImage), which has no terminal to ask for sudo in: the server binds ports 80
+# and 443 as you, and sf-play's "sudo -u sfplay" needs no password (sfplay can do less than you can).
+echo 'net.ipv4.ip_unprivileged_port_start=80' > /etc/sysctl.d/60-sf-server.conf
+sysctl -q -p /etc/sysctl.d/60-sf-server.conf
+echo "$me ALL=($user) NOPASSWD: ALL" > /etc/sudoers.d/sf-play
+chmod 440 /etc/sudoers.d/sf-play
+visudo -cqf /etc/sudoers.d/sf-play || { rm -f /etc/sudoers.d/sf-play; echo "Could not add the sudoers rule for sf-play."; }
 echo
 echo "Done. Play: run  sf-play  in a terminal as yourself (never Tools/Launcher.exe, never with your real Soulframe open)."
 echo "Log in with a made-up email and password, NOT your Digital Extremes login."

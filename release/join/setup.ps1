@@ -44,6 +44,11 @@ if (-not (Test-Path -LiteralPath "$Dest\Soulframe.x64.exe")) {
 }
 if ((Get-FileHash -LiteralPath "$Dest\Soulframe.x64.exe").Hash.ToLower() -ne $P16H6) { throw "$Dest is not build P16H6." }
 
+# Defender flags sf-launch.exe (it injects sf_bootstrap.dll into the game, as malware loaders do): exclude just these two.
+$defender = try { (Get-MpComputerStatus).AntivirusEnabled } catch { $false }
+if ($defender) {
+    Add-MpPreference -ExclusionPath "$Dest\sf-launch.exe", "$Dest\sf_bootstrap.dll"
+}
 Copy-Item -LiteralPath "$bin\sf-launch.exe", "$bin\sf_bootstrap.dll" $Dest -Force
 Set-Content -LiteralPath "$Dest\sf-server.txt" $ip -Encoding ascii
 & $isolate -Path $Dest -Server $ip
