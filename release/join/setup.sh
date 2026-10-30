@@ -31,14 +31,14 @@ ip=$(getent ahostsv4 "$server" | awk 'NR == 1 { print $1 }')
 . /etc/os-release
 case " $ID ${ID_LIKE:-} " in
   *" arch "*)
-    pacman -S --needed --noconfirm wine winetricks nftables xorg-xhost libpulse ||
+    pacman -S --needed --noconfirm wine curl nftables xorg-xhost libpulse ||
       { echo "pacman failed. Wine is in [multilib]: enable it in /etc/pacman.conf, then run setup.sh again."; exit 1; } ;;
   *" debian "* | *" ubuntu "*)
     dpkg --add-architecture i386
     apt-get update
-    apt-get install -y wine64 wine32:i386 winetricks nftables x11-xserver-utils pulseaudio-utils ;;
+    apt-get install -y wine64 wine32:i386 curl nftables x11-xserver-utils pulseaudio-utils ;;
   *)
-    echo "Unknown distro '$ID'. Install wine, winetricks, nftables, xhost and pactl yourself, then set SF_SKIP_PACKAGES=1."
+    echo "Unknown distro '$ID'. Install wine, curl, nftables, xhost and pactl yourself, then set SF_SKIP_PACKAGES=1."
     [[ ${SF_SKIP_PACKAGES:-} ]] || exit 1 ;;
 esac
 
@@ -69,12 +69,22 @@ cp "$bin/sf-launch.exe" "$bin/sf_bootstrap.dll" "$dest"
 echo "$ip" > "$dest/sf-server.txt"
 chown -R "$user:" "$home"
 
-# Wine prefix with DXVK (the game is DirectX 11). Needs the internet once, so before the firewall rule.
-if [[ ! -f $home/.wine/.sf-ready ]]; then
-  nft delete table inet sf_copy 2>/dev/null || true
+# Wine prefix with DXVK (the game is DirectX 11). DXVK is pinned and checked here: winetricks reads the latest version
+# from the GitHub API and builds a broken URL (.../download/v/dxvk-.tar.gz) when that answer doesn't parse.
+dxvk=3.1.1 dxvk_sha=40565b4a724aadc4433fa4e010b4b23916d9b1f1baeee64e17186db94f54e608
+if [[ $(cat "$home/.wine/.sf-ready" 2>/dev/null) != "dxvk $dxvk" ]]; then
   as_user WINEDLLOVERRIDES='mscoree,mshtml=' wineboot -i
-  as_user winetricks -q dxvk
-  as_user touch "$home/.wine/.sf-ready"
+  tmp=$(mktemp -d)
+  curl -fL --retry 3 -o "$tmp/dxvk.tar.gz" "https://github.com/doitsujin/dxvk/releases/download/v$dxvk/dxvk-$dxvk.tar.gz"
+  echo "$dxvk_sha  $tmp/dxvk.tar.gz" | sha256sum -c --quiet || { echo "DXVK download is corrupt; run setup.sh again."; exit 1; }
+  tar -xzf "$tmp/dxvk.tar.gz" -C "$tmp"
+  for dll in d3d8 d3d9 d3d10core d3d11 dxgi; do
+    install -o "$user" -m644 "$tmp/dxvk-$dxvk/x64/$dll.dll" "$home/.wine/drive_c/windows/system32/$dll.dll"
+    as_user wine reg add 'HKEY_CURRENT_USER\Software\Wine\DllOverrides' /v "$dll" /d native /f >/dev/null
+  done
+  as_user wineserver -w
+  rm -rf "$tmp"
+  echo "dxvk $dxvk" | as_user tee "$home/.wine/.sf-ready" >/dev/null
 fi
 
 # Everything user sfplay sends goes to loopback or the host, or is rejected. Loaded at every boot.

@@ -52,13 +52,32 @@ if (-not (Test-Cpp)) {
     }
     if (-not (Test-Cpp)) { throw 'The C++ build tools are still missing. Install "Desktop development with C++" in the Visual Studio Installer, then run setup.cmd again.' }
 }
-if (-not (Get-Command rustup -ErrorAction SilentlyContinue)) { Install 'Rustlang.Rustup' 'Rust' }
-if (-not (Get-Command rustup -ErrorAction SilentlyContinue)) { throw 'Rust still not found. Close this window and run setup.cmd again.' }
-rustup toolchain install $toolchain --profile minimal  # leaves your default toolchain alone
-if ($LASTEXITCODE) { throw "rustup could not install $toolchain" }
+# An existing Rust is reused: rustup (its default toolchain is left alone), or a standalone install without rustup.
+$plus = @()
+if (-not (Get-Command rustup -ErrorAction SilentlyContinue) -and -not (Get-Command cargo -ErrorAction SilentlyContinue)) {
+    Install 'Rustlang.Rustup' 'Rust'
+    if (-not (Get-Command rustup -ErrorAction SilentlyContinue)) { throw 'Rust still not found. Close this window and run setup.cmd again.' }
+}
+if (Get-Command rustup -ErrorAction SilentlyContinue) {
+    rustup toolchain install $toolchain --profile minimal
+    if ($LASTEXITCODE) { throw "rustup could not install $toolchain" }
+    $plus = @("+$toolchain")
+}
+
+# Defender flags sf-launch.exe: it injects sf_bootstrap.dll into the game, which is what malware loaders do too.
+# Exclude only the build folder and those two files in the game copy (one admin prompt).
+$exclude = @("$root\bootstrap\target", "$Dest\sf-launch.exe", "$Dest\sf_bootstrap.dll")
+$defender = try { (Get-MpComputerStatus).AntivirusEnabled } catch { $false }
+if ($defender) {
+    "Adding Microsoft Defender exclusions (it flags the launcher because it injects a DLL into the game):"
+    $exclude | ForEach-Object { "  $_" }
+    $cmd = 'Add-MpPreference -ExclusionPath ' + (($exclude | ForEach-Object { "'" + ($_ -replace "'", "''") + "'" }) -join ',')
+    Start-Process powershell.exe -Verb RunAs -Wait -ArgumentList '-NoProfile', '-EncodedCommand',
+        ([Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($cmd)))
+}
 
 "Building sf-launch.exe and sf_bootstrap.dll..."
-cargo "+$toolchain" build --release --manifest-path "$root\bootstrap\Cargo.toml"
+cargo @plus build --release --manifest-path "$root\bootstrap\Cargo.toml"
 if ($LASTEXITCODE) { throw 'cargo build failed (see above)' }
 
 # Copies the game and adds the firewall rules; it asks for admin itself.

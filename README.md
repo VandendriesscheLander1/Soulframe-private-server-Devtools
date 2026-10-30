@@ -18,11 +18,14 @@ separate copy of the game, and git to clone this repo.
 3. Double-click `setup.cmd` in the cloned folder. It:
    - installs what's missing with winget: Python 3.12, Rust, and the Visual Studio C++ build tools
      (a few GB, the first time takes a while; accept the prompts),
-   - builds `sf-launch.exe` and `sf_bootstrap.dll`,
+   - adds Microsoft Defender exclusions for the build folder and the launcher + DLL in the game copy (Defender flags
+     the launcher because it injects the DLL into the game, as malware loaders do; one admin prompt),
+   - builds `sf-launch.exe` and `sf_bootstrap.dll` (an existing Rust install is reused),
    - asks for admin, copies your game to `%USERPROFILE%\SoulframePrivate` (your real install is only read) and adds
      firewall rules so that copy can only reach your own PC. Steam/Epic install? It asks for the folder.
 
    If it stops after installing Python or Rust, close the window and double-click `setup.cmd` again.
+   Another antivirus (Avast, Norton, ...) may also block `sf-launch.exe`: add the same exclusions there by hand.
 
 **Windows: every time you play**
 
@@ -35,7 +38,9 @@ separate copy of the game, and git to clone this repo.
 1. Clone the repo (as above). Arch: enable `[multilib]` in `/etc/pacman.conf` first (for Wine).
 2. Close Soulframe and its launcher.
 3. In the cloned folder run `bash setup.sh` as yourself (it asks for your sudo password). It:
-   - installs Python, Rust and zig (to build the Windows `sf-launch.exe` and `sf_bootstrap.dll` for Wine),
+   - installs Python, Rust (reuses yours if you have rustup) and zig, to build the Windows `sf-launch.exe` and
+     `sf_bootstrap.dll` for Wine,
+   - installs DXVK 3.1.1 into the Wine prefix (needs a Vulkan-capable GPU driver),
    - installs Wine and nftables, creates a user `sfplay`, copies your game (Steam, Lutris or a Wine prefix; it asks
      if it can't find it) to `/home/sfplay/SoulframePrivate`, and adds a firewall rule so `sfplay` can only reach
      this PC.
