@@ -28,7 +28,8 @@ if FROZEN:
 else:
     DATA, JOIN = REPO, REPO / 'release/join'
 SETTINGS = DATA / 'data/gui.json'
-COPY = pathlib.Path(os.environ.get('USERPROFILE', '')) / 'SoulframePrivate' if WINDOWS else pathlib.Path('/home/sfplay/SoulframePrivate')
+COPY_NAME = 'SoulframePrivate'  # the copy always gets a folder of its own: setup takes it over (chown on Linux)
+DEFAULT_COPY = pathlib.Path(os.environ.get('USERPROFILE', '')) / COPY_NAME if WINDOWS else pathlib.Path('/home/sfplay') / COPY_NAME
 NO_WINDOW = 0x08000000 if WINDOWS else 0  # CREATE_NO_WINDOW
 # PyInstaller points LD_LIBRARY_PATH at its bundled libs; system programs we start (pkexec, sudo, wine) need their own.
 ENV = dict(os.environ)
@@ -73,8 +74,9 @@ def game_build(folder: str) -> str:
     return 'ok' if ok else 'wrong game version (this server needs build P16H6, 2026.10.08)'
 
 
-def is_set_up() -> bool:
-    return (COPY / 'sf-launch.exe').is_file() if WINDOWS else bool(shutil.which('sf-play'))
+def is_set_up(copy: pathlib.Path) -> bool:
+    # Linux: sf-play (from setup.sh) knows where the copy is, and the default one under /home/sfplay isn't readable by us.
+    return (copy / 'sf-launch.exe').is_file() if WINDOWS else bool(shutil.which('sf-play'))
 
 
 class App(tk.Tk):
@@ -89,6 +91,7 @@ class App(tk.Tk):
         except (OSError, ValueError):
             saved = {}
         self.folder = tk.StringVar(value=saved.get('game', ''))
+        self.copy = tk.StringVar(value=saved.get('copy', str(DEFAULT_COPY)))
         self.host = tk.BooleanVar(value=saved.get('host', False))
         self.status = tk.StringVar()
 
@@ -97,7 +100,11 @@ class App(tk.Tk):
         ttk.Label(top, text='Your Soulframe folder (with Soulframe.x64.exe):').grid(row=0, column=0, columnspan=2, sticky='w')
         ttk.Entry(top, textvariable=self.folder).grid(row=1, column=0, sticky='ew', padx=(0, 6))
         ttk.Button(top, text='Browse...', command=self.browse).grid(row=1, column=1)
-        ttk.Label(top, textvariable=self.status).grid(row=2, column=0, columnspan=2, sticky='w', pady=(4, 0))
+        ttk.Label(top, text=f'Put the private copy in (about 13 GB, a {COPY_NAME} folder of its own):').grid(
+            row=2, column=0, columnspan=2, sticky='w', pady=(6, 0))
+        ttk.Entry(top, textvariable=self.copy).grid(row=3, column=0, sticky='ew', padx=(0, 6))
+        ttk.Button(top, text='Browse...', command=self.browse_copy).grid(row=3, column=1)
+        ttk.Label(top, textvariable=self.status).grid(row=4, column=0, columnspan=2, sticky='w', pady=(4, 0))
         top.columnconfigure(0, weight=1)
 
         bar = ttk.Frame(self, padding=(8, 0))
@@ -142,12 +149,25 @@ class App(tk.Tk):
 
     def save(self):
         SETTINGS.parent.mkdir(parents=True, exist_ok=True)
-        SETTINGS.write_text(json.dumps({'game': self.folder.get(), 'host': self.host.get(), 'dev': self.dev.get()}))
+        SETTINGS.write_text(json.dumps({'game': self.folder.get(), 'copy': self.copy.get(), 'host': self.host.get(),
+                                        'dev': self.dev.get()}))
+
+    def copy_dir(self) -> pathlib.Path:
+        return pathlib.Path(self.copy.get().strip())
 
     def open_devgui(self):
         self.save()
-        if not (self.devgui and self.devgui.poll() is None):
-            self.devgui = subprocess.Popen(script('--devgui'), cwd=DATA / 'tools', creationflags=NO_WINDOW)
+        if not (self.devgui and self.devgui.poll() is None):  # SF_COPY: where devlua.py writes dev.luac
+            self.devgui = subprocess.Popen(script('--devgui'), cwd=DATA / 'tools', creationflags=NO_WINDOW,
+                                           env={**ENV, 'SF_COPY': str(self.copy_dir())})
+
+    def browse_copy(self):
+        picked = filedialog.askdirectory(title='Where to put the private copy', initialdir=self.copy_dir().parent)
+        if picked:
+            picked = pathlib.Path(picked)
+            self.copy.set(str(picked if picked.name == COPY_NAME else picked / COPY_NAME))
+            self.save()
+            self.check()
 
     def browse(self):
         picked = filedialog.askdirectory(title='Soulframe folder (the one with Soulframe.x64.exe)', initialdir=self.folder.get() or None)
@@ -157,7 +177,7 @@ class App(tk.Tk):
             self.check()
 
     def check(self):
-        state = 'set up' if is_set_up() else 'not set up yet'
+        state = 'set up' if is_set_up(self.copy_dir()) else 'not set up yet'
         self.status.set(f'Private copy: {state}.  Server: {"running" if self.server and self.server.poll() is None else "stopped"}.')
         self.server_btn.configure(text='Stop server' if self.server and self.server.poll() is None else '2. Start server')
 
@@ -166,12 +186,17 @@ class App(tk.Tk):
         build = game_build(folder) if folder else 'pick your Soulframe folder first'
         if build != 'ok':
             return messagebox.showerror('Set up', build)
+        copy = self.copy_dir()
+        if copy.name != COPY_NAME or not copy.is_absolute():
+            return messagebox.showerror('Set up', f'The private copy needs a folder of its own, named {COPY_NAME}.')
         self.save()
         if WINDOWS:  # setup.ps1 asks for admin itself and shows its progress in its own window
-            subprocess.Popen(['powershell.exe', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', str(JOIN / 'setup.ps1'), '-Source', folder])
+            subprocess.Popen(['powershell.exe', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', str(JOIN / 'setup.ps1'),
+                              '-Source', folder, '-Dest', str(copy)])
             self.say('Setup is running in its own window (accept the admin prompt). Click Play when it says Done.')
         else:  # pkexec shows a password prompt; setup.sh expects SUDO_USER from sudo
-            proc = subprocess.Popen(['pkexec', '/usr/bin/env', f'SUDO_USER={os.environ.get("USER", "")}', 'bash', str(JOIN / 'setup.sh'), folder],
+            proc = subprocess.Popen(['pkexec', '/usr/bin/env', f'SUDO_USER={os.environ.get("USER", "")}', 'bash', str(JOIN / 'setup.sh'),
+                                     folder, str(copy)],
                                     stdout=subprocess.PIPE, stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL, text=True, env=ENV)
             self.stream(proc, 'setup: ')
 
@@ -186,13 +211,14 @@ class App(tk.Tk):
         self.check()
 
     def play(self):
-        if not is_set_up():
+        copy = self.copy_dir()
+        if not is_set_up(copy):
             return messagebox.showerror('Play', 'Set up the private copy first (button 1).')
         if not (self.server and self.server.poll() is None):
             self.toggle_server()
         # sf-launch.exe opens its own console if something is wrong; sf-play (Linux) prints to our log.
         if WINDOWS:
-            subprocess.Popen([str(COPY / 'sf-launch.exe')], cwd=COPY)
+            subprocess.Popen([str(copy / 'sf-launch.exe')], cwd=copy)
             if self.dev.get():
                 self.open_devgui()
         else:
