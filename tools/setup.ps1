@@ -40,6 +40,19 @@ Set-Content -LiteralPath "$root\.python-path" $python -Encoding ascii  # play.cm
 & $python -m pip install --user --quiet --disable-pip-version-check cryptography
 if ($LASTEXITCODE) { throw 'pip install cryptography failed' }
 
+# The dev tools (tools\devlua.py, devgui.pyw) compile dev\dev.lua with upstream luau-compile 0.712 (bytecode v6).
+$luau = "$root\tools\luau"
+if (-not (Test-Path -LiteralPath "$luau\luau-compile.exe")) {
+    "Downloading luau-compile 0.712 (for the dev tools)..."
+    $zip = "$env:TEMP\luau-0.712-windows.zip"
+    Invoke-WebRequest 'https://github.com/luau-lang/luau/releases/download/0.712/luau-windows.zip' -OutFile $zip -UseBasicParsing
+    if ((Get-FileHash -LiteralPath $zip).Hash -ne '7AFDCB791E16A08A7A3D21E8990DDB9A46E50E46092E132FB91ACC3045BB3D2F') {
+        throw 'The Luau download is not the expected 0.712 build; run setup.cmd again.'
+    }
+    Expand-Archive -LiteralPath $zip -DestinationPath $luau -Force
+    Remove-Item -LiteralPath $zip
+}
+
 if (-not (Test-Cpp)) {
     $vs = if (Test-Path "$vsInstaller\vswhere.exe") { & "$vsInstaller\vswhere.exe" -latest -products * -property installationPath }
     if ($vs) {  # Visual Studio is there without C++: winget would only say "already installed"

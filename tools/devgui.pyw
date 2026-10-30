@@ -13,9 +13,10 @@ from tkinter import ttk
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import devlua  # noqa: E402
 
-# Where the box's game writes sf-bootstrap.log (sf-launch copies use <game>\sf-appdata\Local\Soulframe instead).
+# Where the game writes sf-bootstrap.log: in the Sandboxie box, or in the sf-launch copy setup.cmd made.
 LOGS = [os.path.join(os.environ.get('SystemDrive', 'C:') + '\\', 'Sandbox', os.environ.get('USERNAME', '*'),
-                     'Soulframe*', 'user', 'current', 'AppData', 'Local', 'Soulframe', 'sf-bootstrap.log')]
+                     'Soulframe*', 'user', 'current', 'AppData', 'Local', 'Soulframe', 'sf-bootstrap.log'),
+        os.path.join(devlua.COPY, 'sf-appdata', 'Local', 'Soulframe', 'sf-bootstrap.log')]
 ANSWER_TIMEOUT = 15.0  # seconds before a command counts as unanswered and the queue moves on
 GAME_EXE = 'soulframe.x64.exe'
 

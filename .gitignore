@@ -239,3 +239,6 @@ __marimo__/
 
 # Python that setup.cmd found (play.cmd uses it)
 /.python-path
+
+# luau-compile, downloaded by tools/setup.ps1 for the dev tools
+/tools/luau/

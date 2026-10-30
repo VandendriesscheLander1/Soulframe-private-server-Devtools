@@ -73,7 +73,8 @@ and players get only `dist\sf-join`. See [release/host/README.txt](release/host/
 | `tools/dummy_server.py` | The server (login, inventory, fixtures, hub relay); makes `certs/` on first run |
 | `tools/admin.py` | Account admin (`python tools/admin.py accounts`) |
 | `tools/shop_rolls.py`, `tools/vendor.py`, `gamedata/` | Shop stock and weapon temper rolls, from the game's package data |
-| `tools/devgui.pyw`, `tools/devlua.py`, `dev/dev.lua` | In-game dev tools (also need soulframe-rust-workspace next to this repo) |
+| `tools/devgui.pyw`, `tools/devlua.py`, `dev/dev.lua` | In-game dev tools (Windows; F9 in game, or `pythonw tools\devgui.pyw` while playing). `setup.cmd` downloads the Luau compiler they use to `tools\luau` |
+| `tools/stock_to_game.py`, `tools/luau_to_stock.py` | Turn Luau bytecode into the game's form (from soulframe-rust-workspace), with `gamedata/opcode-map.json` and `corpus_atoms.json` |
 | `tools/*.ps1` | Pin a build, make an isolated copy, redirect, launch, build packages |
 | `bootstrap/` | Rust: `sf-launch.exe` and `sf_bootstrap.dll` |
 | `release/host`, `release/join` | Packages for a shared host and its players (`tools/make-packages.ps1`) |

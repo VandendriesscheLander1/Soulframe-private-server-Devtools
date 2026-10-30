@@ -6,27 +6,33 @@
 
 The command is an expression compiled into the same chunk as dev.lua, so it sees the library's local functions;
 its value (or the error) is logged to sf-bootstrap.log as a `dev:` line. The enemy type list comes from the decompiled
-BossFightTester in the rust workspace, so no game data lives in this repo.
-Upstream luau-compile (v6) -> stock_to_game.py (opcode permutation, atoms) -> bootstrap/target/release/dev.luac.
+BossFightTester in the rust workspace when it's there, else from gamedata/enemy_types.json (the same list).
+Upstream luau-compile 0.712 (v6) -> stock_to_game.py (opcode permutation, atoms) -> dev.luac next to the
+sf_bootstrap.dll the game loads: %USERPROFILE%\\SoulframePrivate (setup.cmd) if set up, else bootstrap/target/release.
 """
-import os, re, subprocess, sys, tempfile
+import json, os, re, subprocess, sys, tempfile
+import stock_to_game  # tools/stock_to_game.py
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 WORKSPACE = os.path.join(HERE, '..', '..', 'soulframe-rust-workspace')
-COMPILER = os.path.join(WORKSPACE, 'target', 'x', 'b7', 'Release', 'luau-compile.exe')
+# tools/luau: the official 0.712 build that setup.ps1 downloads; the workspace's own build of the same tag otherwise.
+COMPILER = next((p for p in (os.path.join(HERE, 'luau', 'luau-compile.exe'),
+                             os.path.join(WORKSPACE, 'target', 'x', 'b7', 'Release', 'luau-compile.exe')) if os.path.exists(p)),
+                os.path.join(HERE, 'luau', 'luau-compile.exe'))
 TESTER = os.path.join(WORKSPACE, 'target', 'x', 'corpus', 'out', 'SF', 'Scripts', 'Bosses', 'BossFightTester.lua')
+ENEMIES = os.path.join(HERE, '..', 'gamedata', 'enemy_types.json')
 LIBRARY = os.path.join(HERE, '..', 'dev', 'dev.lua')
-OUT = os.path.join(HERE, '..', 'bootstrap', 'target', 'release', 'dev.luac')
+COPY = os.path.join(os.environ.get('USERPROFILE', ''), 'SoulframePrivate')
+OUT = os.path.join(COPY if os.path.exists(os.path.join(COPY, 'sf_bootstrap.dll')) else
+                   os.path.join(HERE, '..', 'bootstrap', 'target', 'release'), 'dev.luac')
 NO_WINDOW = getattr(subprocess, 'CREATE_NO_WINDOW', 0)  # no console flash when the GUI (devgui.pyw) compiles
-sys.path.insert(0, os.path.join(WORKSPACE, 'research'))
-import stock_to_game  # noqa: E402
 
 
 def enemy_types() -> list[str]:
     try:
         text = open(TESTER, encoding='utf-8').read()
     except OSError:
-        return []  # full /SF/Types/... paths still work
+        return json.load(open(ENEMIES, encoding='utf-8'))
     return list(dict.fromkeys(re.findall(r'enemyType = WeakResource\("([^"]+)"\)', text)))
 
 
