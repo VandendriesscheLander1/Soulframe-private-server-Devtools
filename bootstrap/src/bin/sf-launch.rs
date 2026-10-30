@@ -114,6 +114,9 @@ fn run() -> Result<(), String> {
 /// The copy must have an enabled outbound block rule (tools\isolate-build.ps1 -Path, as admin), the same check as
 /// tools\play.ps1. The DLL redirects what it knows about; the firewall stops whatever it doesn't.
 fn firewalled(exe: &Path) -> Result<(), String> {
+    if on_wine() {
+        return offline();
+    }
     let quoted = exe.to_string_lossy().replace('\'', "''");
     let script = format!(
         "if (Get-NetFirewallProfile | Where-Object {{ -not $_.Enabled }}) {{ 'profile-off'; exit }}
@@ -134,6 +137,26 @@ fn firewalled(exe: &Path) -> Result<(), String> {
             exe.parent().unwrap().display()
         )),
     }
+}
+
+/// Wine's ntdll exports wine_get_version; Windows' doesn't.
+fn on_wine() -> bool {
+    let ntdll: Vec<u16> = "ntdll.dll\0".encode_utf16().collect();
+    unsafe { !GetProcAddress(GetModuleHandleW(ntdll.as_ptr()), c"wine_get_version".as_ptr().cast()).is_null() }
+}
+
+/// Linux has no Windows Firewall to ask, so test the real thing: the nftables rule from release/join/setup.sh
+/// rejects everything but the host and loopback for this user. Any public address answering means it isn't loaded.
+fn offline() -> Result<(), String> {
+    use std::net::{SocketAddr, TcpStream};
+    for addr in ["1.1.1.1:443", "9.9.9.9:443", "8.8.8.8:53"] {
+        if TcpStream::connect_timeout(&addr.parse::<SocketAddr>().unwrap(), std::time::Duration::from_secs(3)).is_ok() {
+            return Err(format!(
+                "this copy can reach the internet ({addr}), so the firewall rule is missing.\nRun play.sh (not wine directly), or setup.sh again."
+            ));
+        }
+    }
+    Ok(())
 }
 
 /// Inject the DLL into the suspended game, wait for its "all hooked" event, then let the game run.

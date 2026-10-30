@@ -30,3 +30,15 @@ How it stays away from your real game
 Uninstall
 - Run as admin:  Remove-NetFirewallRule -Group Soulframe-Copy-SoulframePrivate
 - Delete the SoulframePrivate folder.
+
+Linux (Arch, Ubuntu/Debian)
+- Setup: open a terminal in this folder and run  bash setup.sh  (it asks for your sudo password).
+  It installs Wine, winetricks and nftables, creates a user "sfplay", and copies your install (Steam, Lutris,
+  or a Wine prefix; it asks if it can't find it) to /home/sfplay/SoulframePrivate.
+  Arch: enable [multilib] in /etc/pacman.conf first.
+- It also adds an nftables rule (service sf-copy-firewall, loaded at boot) so that sfplay can reach only the host
+  and loopback. Windows Firewall doesn't exist under Wine; this rule does that job.
+- Play: run  sf-play  as yourself. The game runs as sfplay on your screen. sf-launch refuses to start
+  if sfplay can reach the internet.
+- Sound is shared over loopback (anonymous PulseAudio on 127.0.0.1:4713), so other local users could use it too.
+- Uninstall: see the "Undo" line at the top of setup.sh.

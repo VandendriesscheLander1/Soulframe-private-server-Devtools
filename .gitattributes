@@ -1,2 +1,3 @@
 fixtures/** binary
 *.sha256 -text
+*.sh text eol=lf
