@@ -17,9 +17,9 @@ Without --as: the only account, or data/inventory.json while there are none.
 import hashlib, hmac, json, math, os, secrets, pathlib, random, shutil, sys, tempfile, time, zlib
 import vendor as vendor_rules  # tools/vendor.py: the current vendor stock + package data
 
+import shop_rolls  # tools/shop_rolls.py: roll_tempers, the native weapon temper roll (ShopsDecode.md)
+
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(ROOT.parent / 'soulframe-rust-workspace/research'))
-import shop_rolls  # roll_tempers: the native weapon temper roll (ShopsDecode.md)
 
 SEED = ROOT / 'data/seed.json'  # your own exported inventory, if you dropped one there (gitignored)
 SEED = SEED if SEED.exists() else ROOT / 'fixtures/inventory/response.json'

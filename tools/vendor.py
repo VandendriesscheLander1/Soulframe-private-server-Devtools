@@ -11,10 +11,11 @@ answer for the same hour, every request); weekly items reroll price and Id every
 
 Usage:  python tools/vendor.py [--selftest]      prints the current Avakot stock
 """
-import datetime, functools, hashlib, json, pathlib, random, sys, time
+import datetime, functools, gzip, hashlib, json, pathlib, random, sys, time
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-PACKAGES = ROOT.parent / 'soulframe-pipeline/formatted_packages.json'  # ponytail: Oct 2 export, not re-extracted for P16H6
+# soulframe-pipeline's formatted_packages.json, gzipped. ponytail: Oct 2 export, not re-extracted for P16H6
+PACKAGES = ROOT / 'gamedata/packages.json.gz'
 FIXTURE = ROOT / 'fixtures/getVendorInfo/response.raw'
 ANCHOR = 1767225600  # 2026-01-01T00:00Z: the schedule is simulated hourly from here, so it never jumps
 FAR = 2051240400000  # 2035-01-01T05:00Z (ms), the live answer's expiry for always-offered and weekly items
@@ -25,8 +26,8 @@ KNOWN = {'/SF/Types/Game/AvakotVendorManifest'}  # ponytail: the one dynamic ven
 
 @functools.lru_cache(maxsize=None)
 def packages():
-    """All package data ({path: {attributes, parent}}); loaded once (83 MB, a few seconds)."""
-    return json.loads(PACKAGES.read_text(encoding='utf-8'))
+    """All package data ({path: {attributes, parent}}); loaded once (45 MB unpacked, a few seconds)."""
+    return json.loads(gzip.decompress(PACKAGES.read_bytes()))
 
 
 @functools.lru_cache(maxsize=None)

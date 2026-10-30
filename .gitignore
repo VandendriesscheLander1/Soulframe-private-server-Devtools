@@ -236,3 +236,6 @@ __marimo__/
 # Editor / agent config
 /.claude/
 /.vscode/
+
+# Python that setup.cmd found (play.cmd uses it)
+/.python-path

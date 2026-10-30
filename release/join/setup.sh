@@ -17,7 +17,13 @@ dest=$home/SoulframePrivate
 as_user() { sudo -u "$user" env HOME="$home" WINEPREFIX="$home/.wine" WINEDEBUG=-all "$@"; }
 
 # Wine resolves names inside the game, and the firewall blocks DNS for it, so the copy gets the IP, not a name.
-server=$(head -n1 "$here/sf-server.txt" | tr -d '\r[:space:]')
+# In the sf-join package everything is next to this script; in a clone of the repo (setup.sh at the top) the
+# launcher and DLL come from the cargo build, and with no sf-server.txt the server is this PC.
+bin=$here
+[[ -f $bin/sf-launch.exe ]] || bin=$here/../../bootstrap/target/x86_64-pc-windows-gnu/release
+[[ -f $bin/sf_bootstrap.dll ]] || { echo "sf_bootstrap.dll not found. From a clone of the repo, run setup.sh at the top."; exit 1; }
+server=127.0.0.1
+[[ ! -f $here/sf-server.txt ]] || server=$(head -n1 "$here/sf-server.txt" | tr -d '\r[:space:]')
 ip=$(getent ahostsv4 "$server" | awk 'NR == 1 { print $1 }')
 [[ $ip ]] || { echo "Could not find an IPv4 address for '$server' (sf-server.txt)."; exit 1; }
 
@@ -59,7 +65,7 @@ if [[ ! -f $dest/Soulframe.x64.exe ]]; then
   cp -r "$src/." "$dest"
 fi
 [[ $(sha256sum "$dest/Soulframe.x64.exe" | cut -d' ' -f1) == "$P16H6" ]] || { echo "$dest is not build P16H6."; exit 1; }
-cp "$here/sf-launch.exe" "$here/sf_bootstrap.dll" "$dest"
+cp "$bin/sf-launch.exe" "$bin/sf_bootstrap.dll" "$dest"
 echo "$ip" > "$dest/sf-server.txt"
 chown -R "$user:" "$home"
 

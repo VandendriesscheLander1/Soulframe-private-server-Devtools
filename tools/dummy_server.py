@@ -13,13 +13,13 @@ is only logged, and so is UDP 6952 unless --hub is given.
 UNFINISHED, OFF BY DEFAULT: the hub relay (tools/hub_relay.py, findings/0027) that shows other players in enclaves
 (Kith of Kings). It was never confirmed in a box run and is parked for now. Without it the enclaves work as solo.
 
-Usage:  python tools/dummy_server.py                  (needs certs/soulframe.{crt,key}; this PC only)
+Usage:  python tools/dummy_server.py                  (this PC only; makes certs/ on first run)
         python tools/dummy_server.py --host           (also other PCs: LAN, Tailscale/ZeroTier)
         python tools/dummy_server.py --hub            (unfinished: enclave hub relay, other players in enclaves)
         python tools/dummy_server.py --mirror         (implies --hub: an "Echo" of yourself, to test the hub alone)
         python tools/dummy_server.py --selftest       (high ports, checks HTTP + TLS + chunked)
 """
-import datetime, gzip, hashlib, http.client, http.server, json, pathlib, re, socket, ssl, sys, threading, urllib.parse
+import datetime, gzip, hashlib, http.client, http.server, json, os, pathlib, re, socket, ssl, sys, threading, urllib.parse
 from cryptography.hazmat.primitives import padding
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 import admin  # tools/admin.py: saved inventory + request handlers
@@ -258,6 +258,43 @@ def serve_udp(port):
     return sock
 
 
+def make_certs():
+    """First run: a local CA and a *.soulframe.com leaf signed by it. sf_bootstrap turns the game's TLS checks off,
+    so these only have to exist; the CA key is never written."""
+    if CERT.exists() and KEY.exists():
+        return
+    from cryptography import x509
+    from cryptography.hazmat.primitives import hashes, serialization
+    from cryptography.hazmat.primitives.asymmetric import rsa
+    from cryptography.x509.oid import NameOID
+    now = datetime.datetime.now(datetime.timezone.utc)
+    def cert(name, key, issuer, issuer_key, days, ca):
+        b = (x509.CertificateBuilder().subject_name(x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, name)]))
+             .issuer_name(x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, issuer)])).public_key(key.public_key())
+             .serial_number(x509.random_serial_number()).not_valid_before(now - datetime.timedelta(days=1))
+             .not_valid_after(now + datetime.timedelta(days=days))
+             .add_extension(x509.BasicConstraints(ca=ca, path_length=None), critical=True)
+             .add_extension(x509.SubjectKeyIdentifier.from_public_key(key.public_key()), critical=False)
+             .add_extension(x509.AuthorityKeyIdentifier.from_issuer_public_key(issuer_key.public_key()), critical=False))
+        if ca:
+            b = b.add_extension(x509.KeyUsage(digital_signature=False, content_commitment=False, key_encipherment=False,
+                                              data_encipherment=False, key_agreement=False, key_cert_sign=True,
+                                              crl_sign=True, encipher_only=False, decipher_only=False), critical=True)
+        else:
+            b = b.add_extension(x509.SubjectAlternativeName([x509.DNSName('*.soulframe.com'), x509.DNSName('soulframe.com')]), critical=False)
+        return b.sign(issuer_key, hashes.SHA256())
+    ca_name = 'soulframe private server local CA'
+    ca_key, leaf_key = rsa.generate_private_key(65537, 2048), rsa.generate_private_key(65537, 2048)
+    ca = cert(ca_name, ca_key, ca_name, ca_key, 3650, True)
+    leaf = cert('*.soulframe.com', leaf_key, ca_name, ca_key, 825, False)
+    pem = lambda c: c.public_bytes(serialization.Encoding.PEM)
+    CERT.parent.mkdir(exist_ok=True)
+    KEY.write_bytes(leaf_key.private_bytes(serialization.Encoding.PEM, serialization.PrivateFormat.PKCS8, serialization.NoEncryption()))
+    CERT.write_bytes(pem(leaf) + pem(ca))
+    CA.write_bytes(pem(ca))
+    print(f'made new certificates in {CERT.parent}', flush=True)
+
+
 def serve(port, tls):
     srv = Server((BIND, port), Handler)
     if tls:
@@ -336,6 +373,7 @@ def selftest():
 
 
 if __name__ == '__main__':
+    make_certs()
     if '--selftest' in sys.argv:
         OUT = OUT.with_name(OUT.name + '-selftest')
         selftest()
@@ -356,6 +394,13 @@ if __name__ == '__main__':
                             out=lambda line: (print('      ' + line, flush=True), log(event='hub', line=line)))
         else:
             serve_udp(HUB_PORT)
+        if sys.platform != 'win32' and os.geteuid() == 0 and 'SUDO_UID' in os.environ:
+            # Root was only for ports 80/443 (play.sh): back to the user who ran sudo, so data/, captures/ and
+            # certs/ in their clone stay theirs.
+            uid, gid = int(os.environ['SUDO_UID']), int(os.environ['SUDO_GID'])
+            for p in (CERT.parent, CERT, KEY, CA):
+                os.chown(p, uid, gid)
+            os.setgroups([]), os.setgid(gid), os.setuid(uid)
         print(f'listening on {BIND}:80, :443 (TCP) and :{NRS_PORT}, :{HUB_PORT} (UDP), logging to {OUT}', flush=True)
         if BIND != '127.0.0.1':
             addrs = sorted({a[4][0] for a in socket.getaddrinfo(socket.gethostname(), None, socket.AF_INET)})

@@ -1,6 +1,6 @@
 # Build the two folders to hand out (Phase 7): dist\sf-host (the server, for whoever hosts) and dist\sf-join (for players).
 # Usage: tools\make-packages.ps1 [-Server <address>]  (default 127.0.0.1: each player runs the server on their own PC)
-# Neither folder contains game files. sf-host does contain data extracted from the game (soulframe-pipeline): private use only.
+# Neither folder contains game files. sf-host does contain data extracted from the game (gamedata): private use only.
 param([string]$Server = '127.0.0.1')
 $ErrorActionPreference = 'Stop'
 $root = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
@@ -11,17 +11,13 @@ if ((Get-Item "$root\bootstrap\src\lib.rs").LastWriteTime -gt (Get-Item "$bin\sf
 }
 Remove-Item $dist -Recurse -Force -ErrorAction SilentlyContinue
 
-# Host: the server with the sibling folders it reads (tools\admin.py, tools\vendor.py), in the same layout.
+# Host: the server (tools\*.py with fixtures\ and gamedata\); it makes its own certs\ on first start.
 $h = "$dist\sf-host"
 $srv = "$h\soulframe-private-server"
-New-Item -ItemType Directory -Force "$srv\tools", "$srv\data", "$srv\certs", "$h\soulframe-pipeline\Languages", "$h\soulframe-rust-workspace\research" | Out-Null
+New-Item -ItemType Directory -Force "$srv\tools", "$srv\data" | Out-Null
 Copy-Item "$root\tools\*.py" "$srv\tools"
-Copy-Item "$root\fixtures" $srv -Recurse
-Copy-Item "$root\data\seed.json" "$srv\data"  # new players start from this inventory
-Copy-Item "$root\certs\soulframe.crt", "$root\certs\soulframe.key", "$root\certs\ca.crt" "$srv\certs"  # never ca.key
-Copy-Item "$root\..\soulframe-pipeline\formatted_packages.json" "$h\soulframe-pipeline"
-Copy-Item "$root\..\soulframe-pipeline\Languages\Languages_en.json" "$h\soulframe-pipeline\Languages"
-Copy-Item "$root\..\soulframe-rust-workspace\research\shop_rolls.py" "$h\soulframe-rust-workspace\research"
+Copy-Item "$root\fixtures", "$root\gamedata" $srv -Recurse
+if (Test-Path "$root\data\seed.json") { Copy-Item "$root\data\seed.json" "$srv\data" }  # new players start from this inventory
 Copy-Item "$root\release\host\*" $h
 
 # Join: launcher, DLL, the host's address, and the setup that copies + firewalls their own install.
