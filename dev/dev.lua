@@ -15,6 +15,8 @@
 --   marker()                              teleport to the map marker (F10 does this too, panel open or not)
 --   clear()                               remove everything spawn() made
 --   enemies("Grunt")                      list matching enemy types
+--   give("/SF/Weapons/...", 2[, quality]) put items in your inventory (our server's devCheats.php); quality 1..6
+--   credits(10000)                        add credits
 -- The chunk also returns `frame` (devlua.py: `return frame, (command)`): sf_bootstrap.dll calls it every frame while
 -- the ImGui overlay is shown (F9), and it draws the SF dev panel with the game's own ImGui natives (findings/0033).
 
@@ -360,6 +362,31 @@ local function clear()
     return "removed " .. count
 end
 
+-- ---- items: our server's devCheats.php (tools/admin.py dev_cheats, the devs' own cheat endpoint), then the inventory
+-- sync DevImGuiTools does after its cheats, so the item is there without logging in again ----
+
+local function cheat(query, done)
+    local url = a_c67f9605:a_2863bfee() .. "devCheats.php?" .. a_a0f6588f:GetPlayerProfile(0):GetCredentials() .. query
+    Engine.a_16a40eb5(url, "{}", function()
+        gGameData:SyncInventoryFromDB(function()
+            sfdev.ui.said = done
+        end)
+    end)
+    return "asking the server..."
+end
+
+local qualities = { "Worn", "Military", "Officer", "Noble", "Masterwork", "Legendary" }
+
+local function give(path, n, quality)
+    n = n or 1
+    return cheat("&AddItem=" .. path .. "&Count=" .. n .. "&Quality=IQ_" .. string.upper(qualities[quality or 6]),
+        "got " .. n .. " x " .. string.match(path, "[^/]+$"))
+end
+
+local function credits(n)
+    return cheat("&Credits=" .. n, "got " .. n .. " credits")
+end
+
 -- ---- SF dev panel (in game, F9) ----
 
 -- Our own tables never use a field name that compiles to an atom (any `a_XXXXXXXX`, or a name the game's scripts use
@@ -372,6 +399,8 @@ ui.fade = ui.fade or 3
 ui.overcast, ui.wind, ui.rainbow = ui.overcast or 0, ui.wind or 0, ui.rainbow or 1
 ui.dist, ui.place, ui.spot = ui.dist or 100, ui.place or 1, ui.spot or 1
 ui.spotname, ui.coords = ui.spotname or "spot", ui.coords or ""
+ui.invlist, ui.invfilter, ui.invpick, ui.invqty, ui.invqual = ui.invlist or 1, ui.invfilter or "", ui.invpick or 1, ui.invqty or 1, ui.invqual or 6
+ui.invpath, ui.invkey = ui.invpath or "", nil -- invkey nil: recompute the shown list after a reload
 
 local times = { { "Dawn", 5.5 }, { "Morning", 8 }, { "Midday", 12 }, { "Afternoon", 15.5 },
                 { "Evening", 18.5 }, { "Dusk", 20 }, { "Night", 22.5 }, { "Midnight", 0 } }
@@ -604,6 +633,61 @@ local function spawn_tab()
     end
 end
 
+local item_lists = {}
+for i, l in ipairs(sfdev_items or {}) do
+    item_lists[i] = l[1]
+end
+
+-- The chosen list narrowed by the filter, recomputed only when either changes.
+local function shown_items()
+    local key = ui.invlist .. "|" .. ui.invfilter
+    if ui.invkey == key then
+        return
+    end
+    ui.invkey, ui.invshown, ui.invnames, ui.invpick = key, {}, {}, 1
+    for _, path in ipairs(sfdev_items[ui.invlist][2]) do
+        local short = string.match(path, "[^/]+$")
+        if ui.invfilter == "" or string.find(lower(short), lower(ui.invfilter), 1, true) then
+            table.insert(ui.invshown, path)
+            table.insert(ui.invnames, short)
+        end
+    end
+end
+
+local function items_tab()
+    if not sfdev_items then
+        ImGuiTextWrapped("No item lists: run tools/devlua.py again.")
+        return
+    end
+    ui.invlist = ImGuiCombo("##list", ui.invlist, item_lists)
+    ui.invfilter = ImGuiInputText("filter", ui.invfilter)
+    shown_items()
+    if #ui.invshown == 0 then
+        ImGuiText("nothing matches")
+    else
+        ui.invpick = ImGuiCombo("##item", math.min(ui.invpick, #ui.invshown), ui.invnames)
+    end
+    ui.invqty = ImGuiSliderInt("how many", ui.invqty, 1, 100)
+    ui.invqual = ImGuiCombo("weapon quality", ui.invqual, qualities)
+    if ImGuiButton("Give") and #ui.invshown > 0 then
+        act(give, ui.invshown[ui.invpick], ui.invqty, ui.invqual)
+    end
+    ImGuiSeparatorText("Any item path")
+    ui.invpath = ImGuiInputText("##path", ui.invpath)
+    ImGuiSameLine()
+    if ImGuiButton("Give##path") then
+        act(give, ui.invpath, ui.invqty, ui.invqual)
+    end
+    ImGuiSeparatorText("Credits")
+    for i, n in ipairs({ 1000, 10000, 100000 }) do
+        row(i, 3)
+        if ImGuiButton("+" .. n) then
+            act(credits, n)
+        end
+    end
+    ImGuiTextWrapped("From this PC's server; the game re-reads your inventory, no relog needed.")
+end
+
 local function panel()
     if ImGuiBegin("SF dev") then
         if ImGuiBeginTabBar("tabs") then
@@ -617,6 +701,10 @@ local function panel()
             end
             if ImGuiBeginTabItem("Spawn & AI") then
                 spawn_tab()
+                ImGuiEndTabItem()
+            end
+            if ImGuiBeginTabItem("Items") then
+                items_tab()
                 ImGuiEndTabItem()
             end
             ImGuiEndTabBar()

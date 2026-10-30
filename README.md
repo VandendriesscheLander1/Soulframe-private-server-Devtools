@@ -30,7 +30,8 @@ separate copy of the game, and git to clone this repo.
 **Windows: every time you play**
 
 1. Double-click `play.cmd`. It opens the server in its own window and starts the game.
-2. Log in with a made-up email and password. The first login creates your account; use the same one next time.
+2. Log in with a made-up email and password. The first login creates a fresh account that starts at the tutorial;
+   use the same one next time. To start further ahead instead, see "Starting further ahead" below.
 3. When you're done, close the game, then the server window.
 
 **Linux (Arch, Ubuntu/Debian): once**
@@ -54,6 +55,14 @@ separate copy of the game, and git to clone this repo.
 **Updating:** `git pull`, then run `setup.cmd` / `setup.sh` again (it rebuilds and skips the game copy).
 
 **Saves** are in `data/accounts` in the cloned folder. Back that folder up to keep progress.
+
+**Starting further ahead:** put an inventory file at `data/seed.json` and every new account starts from it instead of
+the tutorial. `fixtures/inventory/response.json` is one just past the tutorial (copy it there). To swap an existing
+account's inventory for a file: `python tools/admin.py --as <email> load <file.json>`, then log in again.
+
+**Dev panel (Windows):** press F9 in the world. `play.cmd` builds it each time, so nothing to run by hand. The Items
+tab puts weapons (pick the quality), armour, souls, resources, blueprints, runes or credits straight into your
+inventory; the game re-reads it, no relog. It only works against the server on your own PC.
 
 **Uninstall:** see [release/join/README.txt](release/join/README.txt).
 

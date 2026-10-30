@@ -19,7 +19,7 @@ Usage:  python tools/dummy_server.py                  (this PC only; makes certs
         python tools/dummy_server.py --mirror         (implies --hub: an "Echo" of yourself, to test the hub alone)
         python tools/dummy_server.py --selftest       (high ports, checks HTTP + TLS + chunked)
 """
-import datetime, gzip, hashlib, http.client, http.server, json, os, pathlib, re, socket, ssl, sys, threading, urllib.parse
+import datetime, gzip, hashlib, http.client, http.server, ipaddress, json, os, pathlib, re, socket, ssl, sys, threading, urllib.parse
 from cryptography.hazmat.primitives import padding
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 import admin  # tools/admin.py: saved inventory + request handlers
@@ -126,6 +126,9 @@ class Handler(http.server.BaseHTTPRequestHandler):
             else:
                 inv_path = admin.inventory_path(acct)
                 saved = inv_path if name == 'inventory' else saved
+        if name == 'devCheats' and not ipaddress.ip_address(self.client_address[0]).is_loopback:
+            denied = True  # the F9 panel's item cheats: only the player at this PC, never others on a shared host
+            print(f'  !!  devCheats from {self.client_address[0]} refused (this PC only)', flush=True)
         login = None
         if self.command == 'POST' and name == 'login':
             try:

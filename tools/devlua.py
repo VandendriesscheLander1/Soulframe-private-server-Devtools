@@ -6,12 +6,14 @@
 
 The command is an expression compiled into the same chunk as dev.lua, so it sees the library's local functions;
 its value (or the error) is logged to sf-bootstrap.log as a `dev:` line. The enemy type list comes from the decompiled
-BossFightTester in the rust workspace when it's there, else from gamedata/enemy_types.json (the same list).
+BossFightTester in the rust workspace when it's there, else from gamedata/enemy_types.json (the same list); the
+item lists of the panel's Items tab come from gamedata/packages.json.gz. play.cmd runs this before every game start.
 Upstream luau-compile 0.712 (v6) -> stock_to_game.py (opcode permutation, atoms) -> dev.luac next to the
 sf_bootstrap.dll the game loads: %USERPROFILE%\\SoulframePrivate (setup.cmd) if set up, else bootstrap/target/release.
 """
 import json, os, re, subprocess, sys, tempfile
 import stock_to_game  # tools/stock_to_game.py
+import vendor  # tools/vendor.py: package data
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 WORKSPACE = os.path.join(HERE, '..', '..', 'soulframe-rust-workspace')
@@ -36,9 +38,33 @@ def enemy_types() -> list[str]:
     return list(dict.fromkeys(re.findall(r'enemyType = WeakResource\("([^"]+)"\)', text)))
 
 
+# The Items tab: title, store item categories (ProductCategory). Base types (/Types/Game/) can't be owned.
+ITEM_LISTS = [('Weapons', ('Melee', 'LongGuns')), ('Armour & skins', ('WeaponSkins',)), ('Souls', ('Suits',)),
+              ('Consumables', ('Consumables',)), ('Blueprints', ('Recipes',)), ('Runes & skills', ('Upgrades',))]
+
+
+def items() -> list[tuple[str, list[str]]]:
+    p = vendor.packages()
+    lists = [(title, sorted(k for k, v in p.items() if k.startswith('/SF/StoreItems/') and '/Types/Game/' not in k
+                            and 'TypeName' in v['attributes'] and v['attributes'].get('ProductCategory') in cats))
+             for title, cats in ITEM_LISTS]
+    # Resources have no store item: the server stacks the type itself (admin.py dev_cheats).
+    resources = sorted(k for k, v in p.items() if k.startswith('/SF/Types/PickUps/Resources/') and '/Bundles/' not in k
+                       and 'LocalizeTag' in v['attributes'])
+    return lists[:1] + [('Resources', resources)] + lists[1:]
+
+
+def lua_list(paths: list[str]) -> str:
+    return '{' + ', '.join(f'"{p}"' for p in paths) + '}'
+
+
 def source(command: str) -> str:
     # Prepended on line 1 (dev.lua starts with a comment), so error line numbers still match dev.lua.
-    enemies = 'local sfdev_enemies = {' + ', '.join(f'"{p}"' for p in enemy_types()) + '} '
+    enemies = f'local sfdev_enemies = {lua_list(enemy_types())} '
+    # In a function of its own: ~1100 constants in the main chunk push its imports (string.match) past GETIMPORT's
+    # 1024-constant reach, and they'd compile to the field reads check_fields refuses.
+    lists = ', '.join(f'{{"{t}", {lua_list(ps)}}}' for t, ps in items())
+    enemies += f'local sfdev_items = (function() return {{{lists}}} end)() '
     # `frame` first: sf_bootstrap.dll keeps it and calls it every frame while the overlay is shown (findings/0033); the
     # command's value is on top, which is what gets logged. pcall, so a failing command doesn't take the panel down.
     command = command or '"dev library loaded"'

@@ -2,30 +2,32 @@
 change it from client requests (HANDLERS: purchase, missionInventoryUpdate, ...), and an admin CLI.
 
 Accounts (Phase 6): data/accounts.json, one per login email. The first login creates the account and sets its
-password; each gets data/accounts/<id>/inventory.json, seeded from data/seed.json if present, else
-fixtures/inventory/response.json. The first account takes over an existing data/inventory.json.
+password; each gets data/accounts/<id>/inventory.json: a fresh account (tutorial first, see fresh()), or a copy of
+data/seed.json if you put an inventory there. The first account takes over an existing data/inventory.json.
 The client reads the inventory at login, so restart the game to see a change.
 
 Usage:  python tools/admin.py [--as <email>] give <List> <ItemType> [count]   e.g. give MiscItems /SF/Types/PickUps/Resources/Iron 50
         python tools/admin.py [--as <email>] set <Key> <json>                   e.g. set RegularCredits 99999
         python tools/admin.py [--as <email>] show [Key]
+        python tools/admin.py [--as <email>] load <inventory.json>              replace the inventory with that file
         python tools/admin.py [--as <email>] reset                              back to the starting inventory
         python tools/admin.py accounts                                          list them
         python tools/admin.py --selftest
 Without --as: the only account, or data/inventory.json while there are none.
 """
-import hashlib, hmac, json, math, os, secrets, pathlib, random, shutil, sys, tempfile, time, zlib
+import hashlib, hmac, json, math, os, secrets, pathlib, random, sys, tempfile, time, zlib
 import vendor as vendor_rules  # tools/vendor.py: the current vendor stock + package data
 
 import shop_rolls  # tools/shop_rolls.py: roll_tempers, the native weapon temper roll (ShopsDecode.md)
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 
-SEED = ROOT / 'data/seed.json'  # your own exported inventory, if you dropped one there (gitignored)
-SEED = SEED if SEED.exists() else ROOT / 'fixtures/inventory/response.json'
+SEED = ROOT / 'data/seed.json'  # an inventory new accounts start from instead of a fresh one, if you put one there
+FIXTURE = ROOT / 'fixtures/inventory/response.json'  # the live alt's, just past the tutorial
 INV = ROOT / 'data/inventory.json'  # before any account exists; the first account takes it over
 ACCOUNTS = ROOT / 'data/accounts.json'
 QUALITIES = ('IQ_WORN', 'IQ_MILITARY', 'IQ_OFFICER', 'IQ_NOBLE', 'IQ_MASTERWORK', 'IQ_LEGENDARY')  # mQuality 1..6
+GEAR = {'Suits', 'Melee', 'LongGuns', 'WeaponSkins', 'Upgrades', 'KubrowPets'}  # entries with an ItemId, not stacks
 
 
 def attr(path, key):
@@ -34,11 +36,36 @@ def attr(path, key):
     return shop_rolls.attr(path, key)
 
 
+def fresh(inv):
+    """A brand-new account, from the alt's inventory (FIXTURE) minus its progress: FirstLoginUtils.IsNewPlayer is
+    Q1WakeUp neither active nor done, which starts the tutorial; its faction choice asks for the starting gear.
+    ponytail: no capture of a new account exists; this is the alt with its progress cleared. If the tutorial trips
+    over a key, compare with a real new account's inventory.php."""
+    inv = {k: v for k, v in inv.items() if k not in ('SupportedSyndicate', 'WorldSpawnPosition', 'MotherCustomization')}
+    for key, value in inv.items():
+        if isinstance(value, list) and key != 'CurrentLoadOutIds':  # Quests, Suits, Melee, MiscItems, XPInfo, ...
+            inv[key] = []
+    inv |= {'RegularCredits': 0, 'ReceivedStartingGear': False, 'Created': {'$date': {'$numberLong': str(int(time.time() * 1000))}}}
+    # The presets stay (FactionChoice fills preset 0 with the new suit), without the alt's suit and weapon in them.
+    inv['LoadOutPresets'] = {k: [{f: v for f, v in p.items() if f not in ('m', 's')} for p in presets]
+                             for k, presets in inv['LoadOutPresets'].items()}
+    return inv
+
+
+def starting_inventory():
+    if SEED.exists():
+        inv = json.loads(SEED.read_text(encoding='utf-8'))
+        if not isinstance(inv, dict):
+            raise ValueError(f'{SEED} is not an inventory (a JSON object)')
+        return inv
+    return fresh(json.loads(FIXTURE.read_text(encoding='utf-8')))
+
+
 def load(path=None):
     path = path or INV
     if not path.exists():
         path.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copyfile(SEED, path)
+        write_json(path, starting_inventory())
     return json.loads(path.read_text(encoding='utf-8'))
 
 
@@ -118,7 +145,7 @@ def add_item(inv, list_name, item_type, count=1):
     """Give count of item_type: a stack, or new gear entries ({ItemId, ItemType}) when the list holds gear.
     Returns the entries for an InventoryChanges answer."""
     items = inv.setdefault(list_name, [])
-    if any('ItemId' in i for i in items):
+    if list_name in GEAR or any('ItemId' in i for i in items):
         new = [{'ItemId': {'$oid': new_oid()}, 'ItemType': item_type} for _ in range(count)]
         items.extend(new)
         return new
@@ -235,8 +262,28 @@ def new_weapon(store_item, quality):
     aspect = next((d['ItemType'] for d in attr(store_item, 'DefaultUpgrades') or [] if d.get('Slot', 0) < 0), None)
     state = ((zlib.crc32(item_type.encode()) or 1) << 32) | int.from_bytes(os.urandom(4), 'little')
     tempers = shop_rolls.roll_tempers(aspect, QUALITIES.index(quality) + 1, state) if aspect else []
-    return {'AspectFingerprint': {'buffs': [{'Tag': e['Tag'], 'Value': v} for e, v in tempers], 'curses': []},
-            'AspectType': aspect, 'ItemId': {'$oid': new_oid()}, 'ItemType': item_type, 'Quality': quality, 'XP': 0}
+    weapon = {'AspectFingerprint': {'buffs': [{'Tag': e['Tag'], 'Value': v} for e, v in tempers], 'curses': []},
+              'AspectType': aspect, 'ItemId': {'$oid': new_oid()}, 'ItemType': item_type, 'Quality': quality, 'XP': 0}
+    return weapon if aspect else {k: v for k, v in weapon.items() if k not in ('AspectFingerprint', 'AspectType')}
+
+
+def store_item_for(path):
+    """The store item of an item type (/SF/Weapons/X -> /SF/StoreItems/Weapons/X), or the path if it already is one."""
+    store = path.replace('/SF/', '/SF/StoreItems/', 1)
+    return store if '/StoreItems/' not in path and attr(store, 'TypeName') else path
+
+
+def grant(inv, store_item, changes, quality=None, count=1):
+    """Give count of a store item where its ProductCategory says, into changes (an InventoryChanges): a weapon with
+    tempers when a quality is given, other gear as new entries, the rest as a stack."""
+    item_type = attr(store_item, 'TypeName') or store_item.replace('/StoreItems', '', 1)
+    list_name = attr(store_item, 'ProductCategory') or stack_list_for(inv, item_type)
+    if attr(store_item, 'DefaultUpgrades') and quality:
+        for _ in range(count):
+            inv.setdefault(list_name, []).append(new := new_weapon(store_item, quality))
+            changes.setdefault(list_name, []).append(new)
+    else:
+        changes.setdefault(list_name, []).extend(add_item(inv, list_name, item_type, count))
 
 
 def claim_completed_recipe(inv, body):
@@ -258,14 +305,102 @@ def claim_completed_recipe(inv, body):
             inv['PremiumCredits'] = inv.get('PremiumCredits', 0) - cost
             changes['PremiumCredits'] = changes.get('PremiumCredits', 0) - cost
         inv['PendingRecipes'].remove(p)
-        store_item = r['ResultItem']
-        item_type = attr(store_item, 'TypeName') or store_item.replace('/StoreItems', '', 1)
-        list_name = attr(store_item, 'ProductCategory') or stack_list_for(inv, item_type)
-        if attr(store_item, 'DefaultUpgrades') and r['Quality']:  # a weapon
-            inv.setdefault(list_name, []).append(new := new_weapon(store_item, r['Quality']))
-            changes.setdefault(list_name, []).append(new)
+        grant(inv, r['ResultItem'], changes, r['Quality'])
+    return {'InventoryChanges': changes}
+
+
+def strings(doc):
+    """Every string in a JSON document, depth first."""
+    if isinstance(doc, str):
+        yield doc
+    elif isinstance(doc, dict | list):
+        for v in doc.values() if isinstance(doc, dict) else doc:
+            yield from strings(v)
+
+
+def quest_control(inv, body):
+    """questControl.php?action=completeTask (live capture 20261028T182107549Z; the exe also has startWithoutPrereqs):
+    walk the quest's graph from package data (Nodes, Links). A task's OnCompleted fires its links (Activate /
+    Deactivate other nodes); reaching the EndQuestNode completes the quest ({Completed: <end node>, CompletionDate},
+    as in the alt's inventory). Answer {InventoryChanges: {Quests: [entry], ...node rewards}}, as live.
+    The body was never decoded (live EZIP has a real RSA key), so it's read by value: the quest is the
+    /SF/Types/Quests/ path in it, the task any string that is one of its NodeIds or Tags (QuestLib completes by either).
+    ponytail: OnPass links, counter nodes, XpReward, Lore and syndicate standing are not applied."""
+    action = body.get('_query', {}).get('action', '')
+    found = list(strings({k: v for k, v in body.items() if k != '_query'}))
+    quest = next((attr(s, 'TypeName') or s for s in found if '/Types/Quests/' in s), None)
+    nodes = {n['NodeId']: n for n in attr(quest, 'Nodes') or [] if isinstance(n, dict) and 'NodeId' in n}
+    if not nodes:
+        raise ValueError(f'questControl {action}: no quest I know in {found}')
+    quests = inv.setdefault('Quests', [])
+    entry = next((q for q in quests if q.get('ItemType') == quest), None)
+    if entry is None:
+        quests.append(entry := {'ItemType': quest, 'Progress': {'Current': []}})
+    if 'Completed' in entry:
+        return {'InventoryChanges': {'Quests': [entry]}}
+    current, changes = entry.setdefault('Progress', {}).setdefault('Current', []), {}
+
+    def fire(node_id, port):
+        for link in attr(quest, 'Links') or []:
+            if link['FromNode'] != node_id or link['FromPort'] != port:
+                continue
+            to = link['ToNode']
+            if link['ToPort'] == 'Deactivate' and to in current:
+                current.remove(to)
+            elif link['ToPort'] == 'Activate' and nodes.get(to, {}).get('Type', '').endswith('/EndQuestNode'):
+                entry.clear()
+                entry.update({'Completed': to, 'CompletionDate': {'$date': {'$numberLong': str(int(time.time() * 1000))}},
+                              'ItemType': quest})
+                return
+            elif link['ToPort'] == 'Activate' and to not in current:
+                current.append(to)
+
+    if action.startswith('start'):
+        fire('START', 'OnStarted')
+    elif action == 'completeTask':
+        tags = {n.get('Tag'): i for i, n in nodes.items() if n.get('Tag')}
+        task = next((s if s in nodes else tags[s] for s in found if s in nodes or s in tags), None)
+        if task is None:
+            raise ValueError(f'questControl completeTask: no task of {quest} in {found}')
+        if task in current:
+            current.remove(task)
+        for reward in nodes[task].get('Rewards') or []:
+            grant(inv, reward, changes)
+        fire(task, 'OnCompleted')
+    else:
+        print(f'  !!  questControl action {action!r} not handled; body {found}', flush=True)
+    return {'InventoryChanges': {'Quests': [entry]} | changes}
+
+
+def give_starting_gear(inv, body):
+    """giveStartingGear.php (Warframe's name; not seen in a capture yet): FactionChoice sends the chosen faction's soul,
+    weapon and armour skins (FirstLoginUtils.GetInitialFactionLoadouts), then syncs the inventory. Every item path in
+    the body is given once. The alt's starter sword was IQ_MILITARY."""
+    changes = {}
+    for path in set(strings(body)):
+        if path.startswith('/SF/') and attr(store := store_item_for(path), 'ProductCategory'):
+            grant(inv, store, changes, 'IQ_MILITARY')
+    inv['ReceivedStartingGear'] = True
+    return {'InventoryChanges': changes}
+
+
+def dev_cheats(inv, body):
+    """devCheats.php: the devs' cheat endpoint (DevImGuiTools posts &RerollAspect= to it, then syncs the inventory).
+    Ours, from the F9 panel (dev/dev.lua): &AddItem=<item or store item path>&Count=n[&Quality=IQ_...], &Credits=n.
+    dummy_server.py only takes it from this PC."""
+    q = body.get('_query', {})
+    changes = {}
+    if item := q.get('AddItem'):
+        store, count = store_item_for(item), max(1, min(int(q.get('Count', 1)), 9999))
+        if attr(store, 'ProductCategory'):
+            grant(inv, store, changes, q.get('Quality') if q.get('Quality') in QUALITIES else 'IQ_LEGENDARY', count)
+        elif item in vendor_rules.packages():  # resources have no store item: a stack of the type itself
+            changes.setdefault(name := stack_list_for(inv, item), []).extend(add_item(inv, name, item, count))
         else:
-            changes.setdefault(list_name, []).extend(add_item(inv, list_name, item_type))
+            raise ValueError(f'no item {item}')
+    if credits := int(q.get('Credits', 0)):
+        inv['RegularCredits'] = inv.get('RegularCredits', 0) + credits
+        changes['RegularCredits'] = credits
     return {'InventoryChanges': changes}
 
 
@@ -379,7 +514,7 @@ def lore_fragments(inv, body):
 HANDLERS = {'missionInventoryUpdate': mission_inventory_update, 'purchase': purchase,
             'updateChallengeProgress': challenge_progress, 'loreFragments': lore_fragments,
             'startRecipe': start_recipe, 'claimCompletedRecipe': claim_completed_recipe, 'saveLoadout': save_loadout,
-            'sell': sell}
+            'sell': sell, 'questControl': quest_control, 'giveStartingGear': give_starting_gear, 'devCheats': dev_cheats}
 
 
 def main(args):
@@ -390,9 +525,9 @@ def main(args):
                 raise SystemExit(f'no account {email}; see: python tools/admin.py accounts')
             INV = inventory_path(acct)
             return main(rest)
-        case [cmd, *_] if cmd in ('give', 'set', 'show', 'reset') and len(accts := accounts()) > 1:
+        case [cmd, *_] if cmd in ('give', 'set', 'show', 'load', 'reset') and len(accts := accounts()) > 1:
             raise SystemExit(f'{len(accts)} accounts: pick one with --as <email>')
-        case [cmd, *_] if cmd in ('give', 'set', 'show', 'reset') and (accts := accounts()):
+        case [cmd, *_] if cmd in ('give', 'set', 'show', 'load', 'reset') and (accts := accounts()):
             INV = inventory_path(next(iter(accts.values())))
     match args:
         case ['give', list_name, item_type, *n]:
@@ -406,6 +541,13 @@ def main(args):
         case ['show', *key]:
             inv = load()
             print(json.dumps(inv[key[0]] if key else sorted(inv), indent=1, ensure_ascii=False))
+        case ['load', file]:
+            inv = json.loads(pathlib.Path(file).read_text(encoding='utf-8'))
+            if not isinstance(inv, dict):
+                raise SystemExit(f'{file} is not an inventory (a JSON object)')
+            INV.parent.mkdir(parents=True, exist_ok=True)
+            save(inv)
+            print(f'loaded {file}: log in again (restart the game) to see it')
         case ['reset']:
             INV.unlink(missing_ok=True)
             print('reset: the next inventory.php serves the starting inventory again')
@@ -417,9 +559,16 @@ def main(args):
 
 
 def selftest():
-    global INV, ACCOUNTS
+    global INV, ACCOUNTS, SEED
     tmp = pathlib.Path(tempfile.mkdtemp())
-    INV, ACCOUNTS = tmp / 'inventory.json', tmp / 'accounts.json'
+    INV, ACCOUNTS, SEED = tmp / 'inventory.json', tmp / 'accounts.json', tmp / 'seed.json'
+    new = load(tmp / 'new.json')  # no seed.json: a fresh account, tutorial first
+    assert new['Quests'] == new['Suits'] == new['Melee'] == [] and new['ReceivedStartingGear'] is False
+    assert not {'m', 's'} & set(new['LoadOutPresets']['NORMAL'][0]) and new['CurrentLoadOutIds']
+    main(['load', str(FIXTURE)])  # the alt's inventory, past the tutorial
+    assert load()['Suits'] and load()['ReceivedStartingGear']
+    INV.unlink()
+    SEED = FIXTURE  # the rest starts from the alt's inventory, as data/seed.json would
     save({'Mine': 1})  # an inventory from before accounts: the first account takes it over
     a = login('Me@Example.com', 'pw')
     assert a and a['DisplayName'] == 'me' and load(inventory_path(a)) == {'Mine': 1} and not INV.exists()
@@ -511,9 +660,42 @@ def selftest():
     assert [u['UpgradeFingerprint'] for u in inv['Upgrades'] if u['ItemType'] == '/T/Rune'] == ['{"lvl":1}']
     save_loadout(inv, {'Suits': {suit: {'1': {'Skins': ['a'], 'pricol': {}, 'Songs': []}}}, 'LoadOuts': {}})
     assert inv['Suits'][0]['Configs'][1] == {'Skins': ['a']}
+    if vendor_rules.PACKAGES.exists():
+        selftest_tutorial(inv)
     main(['reset'])
     assert not INV.exists()
     print('selftest ok')
+
+
+def selftest_tutorial(inv):
+    """The quest graph (TCDemoQuest, as live 20261028T182107549Z), starting gear and the F9 panel's devCheats."""
+    tc = '/SF/Types/Quests/TCDemoQuest'
+    inv['Quests'] = [q for q in inv['Quests'] if q['ItemType'] != tc]
+    q = lambda r: r['InventoryChanges']['Quests'][0]
+    assert q(quest_control(inv, {'QuestName': tc, '_query': {'action': 'startWithoutPrereqs'}}))['Progress']['Current'] == ['A99pEAff', 'UY9Y1Vjg']
+    r = quest_control(inv, {'Quest': tc, 'Task': 'UY9Y1Vjg', '_query': {'action': 'completeTask'}})
+    assert q(r)['Progress']['Current'] == ['A99pEAff', 'Gv7irVfi'], r  # the live answer
+    r = quest_control(inv, {'Quest': tc, 'Task': 'HealTutorial', '_query': {'action': 'completeTask'}})  # by Tag
+    assert q(r)['Progress']['Current'] == ['Gv7irVfi'], r  # the live answer
+    helm = lambda: sum(r['ItemCount'] for r in inv['Recipes'] if r['ItemType'].endswith('/GarrenHelmBlueprint'))
+    blueprints = helm()
+    for task in ('Gv7irVfi', 'QuCJITh2', 'CG+T346s', 'MghBUzh8', 'XTTcxcg/', 'ckz2u+Zo', '/4FBXhPT', 'tVnZbpBm'):
+        r = quest_control(inv, {'Quest': tc, 'Task': task, '_query': {'action': 'completeTask'}})
+    assert q(r)['Completed'] == 'YNC0XIhL' and 'Progress' not in q(r), r
+    assert helm() == blueprints + 1  # one of the stag fight's rewards
+    fresh_inv = fresh(json.loads(FIXTURE.read_text(encoding='utf-8')))
+    r = give_starting_gear(fresh_inv, {'Suit': '/SF/Souls/Default/ChampionSoul', 'Skins': [
+        '/SF/Upgrades/Skins/Body/StarterCourageBody'], 'Weapon': '/SF/Weapons/Melee/OneHand/StarterSword/StarterSwordMeleeWeapon'})
+    assert [s['ItemType'] for s in fresh_inv['Suits']] == ['/SF/Souls/Default/ChampionSoul'] and 'ItemId' in fresh_inv['Suits'][0]
+    assert fresh_inv['Melee'][0]['Quality'] == 'IQ_MILITARY' and fresh_inv['WeaponSkins'] and fresh_inv['ReceivedStartingGear']
+    sword = '/SF/Weapons/Melee/OneHand/BromiusCleaver/BromiusCleaverMeleeWeapon'
+    r = dev_cheats(fresh_inv, {'_query': {'AddItem': sword, 'Count': '2', 'Quality': 'IQ_NOBLE', 'Credits': '500'}})
+    assert [m['Quality'] for m in r['InventoryChanges']['Melee']] == ['IQ_NOBLE'] * 2 and fresh_inv['RegularCredits'] == 500, r
+    dev_cheats(fresh_inv, {'_query': {'AddItem': '/SF/Types/Items/Consumables/HealingPotion', 'Count': '3'}})
+    assert fresh_inv['Consumables'] == [{'ItemCount': 3, 'ItemType': '/SF/Types/Items/Consumables/HealingPotion'}]
+    iron = '/SF/Types/PickUps/Resources/ScrapMetals/ScrapIronResource'
+    dev_cheats(fresh_inv, {'_query': {'AddItem': iron, 'Count': '40'}})
+    assert fresh_inv['MiscItems'] == [{'ItemCount': 40, 'ItemType': iron}]
 
 
 if __name__ == '__main__':
