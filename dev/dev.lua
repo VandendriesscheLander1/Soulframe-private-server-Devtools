@@ -362,17 +362,32 @@ local function clear()
     return "removed " .. count
 end
 
--- ---- items: our server's devCheats.php (tools/admin.py dev_cheats, the devs' own cheat endpoint), then the inventory
--- sync DevImGuiTools does after its cheats, so the item is there without logging in again ----
+-- ---- items: our server's devCheats.php (tools/admin.py dev_cheats, the devs' own cheat endpoint), then an inventory
+-- sync, so the item is there without logging in again ----
+
+-- Engine.WebGet, as Background.lua fetches getGuildDojo.php. DevImGuiTools' Engine.a_16a40eb5 sent nothing in retail
+-- (box run 2026-10-30 18:16: no request reached the server). WebGet's callback is a function name, which our chunk
+-- can't define, so frame() syncs the inventory SYNC_FRAMES after asking instead.
+-- ponytail: a fixed wait, not the answer; the local server answers in milliseconds.
+local SYNC_FRAMES = 30
 
 local function cheat(query, done)
     local url = a_c67f9605:a_2863bfee() .. "devCheats.php?" .. a_a0f6588f:GetPlayerProfile(0):GetCredentials() .. query
-    Engine.a_16a40eb5(url, "{}", function()
-        gGameData:SyncInventoryFromDB(function()
-            sfdev.ui.said = done
-        end)
-    end)
+    Engine.WebGet(url, "")
+    sfdev.sync = { SYNC_FRAMES, done }
     return "asking the server..."
+end
+
+-- Every frame while a cheat is pending: count down, then re-read the inventory as Background.lua does.
+local function sync()
+    local s = sfdev.sync
+    s[1] = s[1] - 1
+    if s[1] > 0 then
+        return nil
+    end
+    sfdev.sync = nil
+    gGameData:SyncInventoryFromDB("", true)
+    return s[2]
 end
 
 local qualities = { "Worn", "Military", "Officer", "Noble", "Masterwork", "Legendary" }
@@ -724,7 +739,8 @@ local function run(command)
     return "error: " .. tostring(result)
 end
 
--- sf_bootstrap.dll calls this every frame while the overlay is up, and while it returns true (landing at the marker).
+-- sf_bootstrap.dll calls this every frame while the overlay is up, and while it returns true (landing at the marker,
+-- a pending item sync).
 -- to_marker: F10 was pressed. mx, mz: the map marker, if one is placed.
 local function frame(to_marker, mx, mz)
     sfdev.marker = mx and { mx, mz } or nil
@@ -739,11 +755,19 @@ local function frame(to_marker, mx, mz)
         end
         ui.said = said or ui.said
     end
+    if sfdev.sync then
+        local ok, said = pcall(sync)
+        if not ok then
+            sfdev.sync = nil
+            said = "error: " .. tostring(said)
+        end
+        ui.said = said or ui.said
+    end
     panel()
     for i, m in ipairs(menus) do
         if ui.menus[i] then
             menu(i, m)
         end
     end
-    return sfdev.landing ~= nil
+    return sfdev.landing ~= nil or sfdev.sync ~= nil
 end

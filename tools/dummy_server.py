@@ -142,12 +142,13 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 print('  !!  login refused (wrong password for that email, or no email)', flush=True)
             else:
                 print(f'  ->  {login["email"]} logged in as {login["id"]}', flush=True)
-        if self.command == 'POST' and name in admin.HANDLERS and not denied:  # Phase 4: apply it to the saved inventory
+        # Phase 4: apply it to the saved inventory. devCheats comes as a GET (Engine.WebGet, dev/dev.lua).
+        if (self.command == 'POST' or name == 'devCheats') and name in admin.HANDLERS and not denied:
             try:
                 with state_lock:
                     inv = admin.load(inv_path)
                     # URL flags reach the handler as _query (claimCompletedRecipe's &rush=1)
-                    answer = admin.HANDLERS[name](inv, json.loads(body) | {'_query': q})
+                    answer = admin.HANDLERS[name](inv, json.loads(body or b'{}') | {'_query': q})
                     admin.save(inv, inv_path)
                 answer = {} if answer is None else answer  # applied: never fall through to a 404
             except (ValueError, KeyError, TypeError) as e:  # bad/unknown body: don't save, and say it failed
@@ -337,6 +338,9 @@ def selftest():
     c.request('GET', f'/api/credits.php?{auth}')  # the top-bar wallet follows the saved inventory, not the fixture
     r = c.getresponse()
     assert json.loads(r.read())['PremiumCredits'] == admin.load(admin.inventory_path(me))['PremiumCredits']
+    c.request('GET', f'/api/devCheats.php?{auth}&Credits=7')  # the F9 panel's Engine.WebGet: a GET, no body
+    r = c.getresponse(); r.read()
+    assert r.status == 200 and admin.load(admin.inventory_path(me))['RegularCredits'] == 7
     c.request('GET', f'/api/inventory.php?accountId={me["id"]}&nonce=1')  # someone else's accountId: refused
     r = c.getresponse(); r.read()
     assert r.status == 403
@@ -361,7 +365,7 @@ def selftest():
         s.sendall(b'POST /api/login.php HTTP/1.1\r\nHost: api.soulframe.com\r\nContent-Length: %d\r\n\r\n%s' % (len(creds), creds))
         assert s.recv(100).startswith(b'HTTP/1.1 200')
     rows = [r for l in open(OUT / 'requests.jsonl') if 'n' in (r := json.loads(l))]  # skip the reset from our early close
-    assert [r['body_bytes'] for r in rows] == [0, 45, 7, 0, 0, 0, 47, 0, 0, 0, 0, 0, 0, 2, 45] and rows[14]['sni'] == 'api.soulframe.com', rows
+    assert [r['body_bytes'] for r in rows] == [0, 45, 7, 0, 0, 0, 0, 47, 0, 0, 0, 0, 0, 0, 2, 45] and rows[15]['sni'] == 'api.soulframe.com', rows
     assert (OUT / rows[2]['body_file']).read_bytes() == b'{"x":1}'
     udp = serve_udp(18952)
     socket.socket(socket.AF_INET, socket.SOCK_DGRAM).sendto(b'tr\x00', ('127.0.0.1', 18952))
