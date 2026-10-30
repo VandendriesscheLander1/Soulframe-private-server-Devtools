@@ -12,7 +12,9 @@ import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 # The server is run from source (runpy), so PyInstaller can't see what it imports: name it here.
 import datetime, gzip, hmac, http.client, http.server, math, random, re, secrets, socket, ssl, struct, tempfile, time  # noqa: F401
-import urllib.parse, zlib, collections, functools, ctypes  # noqa: F401
+import urllib.parse, zlib, collections, functools, ctypes, glob  # noqa: F401
+if sys.platform == 'win32':
+    import ctypes.wintypes  # noqa: F401  (devgui.pyw)
 
 P16H6 = '3be7694b589a7e2ae92a53b3e26ed8c3bcfac8c34ff25d69045df374b35e4765'  # Soulframe.x64.exe, build 2026.10.08.15.20
 WINDOWS = sys.platform == 'win32'
@@ -38,18 +40,28 @@ if FROZEN and not WINDOWS:
 
 def unpack():
     """Bundled only: refresh the server's code and data in DATA; data/, certs/ and captures/ are left alone."""
-    for d in 'tools', 'fixtures', 'gamedata', 'join':
-        shutil.copytree(BUNDLE / d, DATA / d, dirs_exist_ok=True)
+    for d in 'tools', 'fixtures', 'gamedata', 'join', 'dev', 'bootstrap':  # dev + bootstrap/src/imgui.rs: devlua.py
+        if (BUNDLE / d).exists():
+            shutil.copytree(BUNDLE / d, DATA / d, dirs_exist_ok=True)
     for sh in JOIN.glob('*.sh'):
         sh.chmod(0o755)
 
 
-def run_server(args):
-    """`<exe> --server [flags]`: the bundled exe doubles as the server process (there is no python.exe to start)."""
-    sys.stdout.reconfigure(line_buffering=True)
+def run_script(name, args):
+    """`<exe> --server|--devgui [flags]`: the bundled exe doubles as these processes (there is no python.exe to start)."""
+    if sys.stdout:
+        sys.stdout.reconfigure(line_buffering=True)
     sys.path.insert(0, str(DATA / 'tools'))
-    sys.argv = [str(DATA / 'tools/dummy_server.py'), *args]
+    sys.argv = [str(DATA / 'tools' / name), *args]
     runpy.run_path(sys.argv[0], run_name='__main__')
+
+
+MODES = {'--server': 'dummy_server.py', '--devgui': 'devgui.pyw'}
+
+
+def script(mode, *args):
+    """The command line for one of MODES: through this exe when bundled, else tools/<script> with this Python."""
+    return [sys.executable, mode, *args] if FROZEN else [sys.executable, '-u', str(REPO / 'tools' / MODES[mode]), *args]
 
 
 def game_build(folder: str) -> str:
@@ -96,6 +108,11 @@ class App(tk.Tk):
         for b in self.setup_btn, self.server_btn, self.play_btn:
             b.pack(side='left', padx=(0, 6))
         ttk.Checkbutton(bar, text='Let other PCs join (--host)', variable=self.host).pack(side='left', padx=6)
+        self.devgui = None
+        self.dev = tk.BooleanVar(value=saved.get('dev', False))
+        if WINDOWS:  # devgui.pyw drives the game window through user32; in game, F9 has the same panel
+            ttk.Checkbutton(bar, text='Dev tools', variable=self.dev,
+                            command=lambda: self.dev.get() and self.open_devgui()).pack(side='left', padx=6)
 
         self.log = tk.Text(self, height=16, state='disabled', wrap='none', font=('Consolas' if WINDOWS else 'monospace', 9))
         self.log.pack(fill='both', expand=True, padx=8, pady=8)
@@ -125,7 +142,12 @@ class App(tk.Tk):
 
     def save(self):
         SETTINGS.parent.mkdir(parents=True, exist_ok=True)
-        SETTINGS.write_text(json.dumps({'game': self.folder.get(), 'host': self.host.get()}))
+        SETTINGS.write_text(json.dumps({'game': self.folder.get(), 'host': self.host.get(), 'dev': self.dev.get()}))
+
+    def open_devgui(self):
+        self.save()
+        if not (self.devgui and self.devgui.poll() is None):
+            self.devgui = subprocess.Popen(script('--devgui'), cwd=DATA / 'tools', creationflags=NO_WINDOW)
 
     def browse(self):
         picked = filedialog.askdirectory(title='Soulframe folder (the one with Soulframe.x64.exe)', initialdir=self.folder.get() or None)
@@ -158,9 +180,7 @@ class App(tk.Tk):
             self.server.terminate()
             return
         self.save()
-        flags = ['--host'] if self.host.get() else []
-        cmd = [sys.executable, '--server', *flags] if FROZEN else [sys.executable, '-u', str(REPO / 'tools/dummy_server.py'), *flags]
-        self.server = subprocess.Popen(cmd, cwd=DATA / 'tools', stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+        self.server = subprocess.Popen(script('--server', *(['--host'] if self.host.get() else [])), cwd=DATA / 'tools', stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                                        stdin=subprocess.DEVNULL, text=True, errors='replace', creationflags=NO_WINDOW)
         self.stream(self.server)
         self.check()
@@ -173,20 +193,23 @@ class App(tk.Tk):
         # sf-launch.exe opens its own console if something is wrong; sf-play (Linux) prints to our log.
         if WINDOWS:
             subprocess.Popen([str(COPY / 'sf-launch.exe')], cwd=COPY)
+            if self.dev.get():
+                self.open_devgui()
         else:
             self.stream(subprocess.Popen(['sf-play'], cwd='/', stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                                          stdin=subprocess.DEVNULL, text=True, env=ENV), 'game: ')
 
     def close(self):
-        if self.server and self.server.poll() is None:
-            self.server.terminate()
+        for proc in self.server, self.devgui:
+            if proc and proc.poll() is None:
+                proc.terminate()
         self.destroy()
 
 
 if __name__ == '__main__':
     if FROZEN:
         unpack()
-    if sys.argv[1:2] == ['--server']:
-        run_server(sys.argv[2:])
+    if sys.argv[1:2] and sys.argv[1] in MODES:
+        run_script(MODES[sys.argv[1]], sys.argv[2:])
     else:
         App().mainloop()

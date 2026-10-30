@@ -10,7 +10,8 @@ server needs (extracted from the game, via soulframe-pipeline).
 
 `SoulframePrivateServer.exe` (Windows) or `SoulframePrivateServer-x86_64.AppImage` (Linux) is one window: pick your
 Soulframe folder (any copy of build P16H6 with `Soulframe.x64.exe`; nothing is downloaded from Digital Extremes),
-click **Set up private copy** once, then **Play** (it starts the server too). Saves live in
+click **Set up private copy** once, then **Play** (it starts the server too). Windows: tick **Dev tools** for the
+spawn / god mode / time-of-day window (the same panel is on F9 in game). Saves live in
 `%LOCALAPPDATA%\SoulframePrivateServer\data` / `~/.local/share/soulframe-private-server/data`.
 On Linux, setup installs Wine itself (Arch: enable `[multilib]` first); the AppImage may need `fuse2`.
 
