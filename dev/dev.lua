@@ -15,8 +15,9 @@
 --   marker()                              teleport to the map marker (F10 does this too, panel open or not)
 --   clear()                               remove everything spawn() made
 --   enemies("Grunt")                      list matching enemy types
---   give("/SF/Weapons/...", 2[, quality]) put items in your inventory (our server's devCheats.php); quality 1..6
+--   give("/SF/Weapons/...", 2[, quality[, shiny]]) put items in your inventory (our server's devCheats.php); quality 1..6, shiny = moonsteel
 --   credits(10000)                        add credits
+--   unlock_all()                          everything in the game, maxed (moonsteel + plain weapons, pacts, ...)
 -- The chunk also returns `frame` (devlua.py: `return frame, (command)`): sf_bootstrap.dll calls it every frame while
 -- the ImGui overlay is shown (F9), and it draws the SF dev panel with the game's own ImGui natives (findings/0033).
 
@@ -392,14 +393,19 @@ end
 
 local qualities = { "Worn", "Military", "Officer", "Noble", "Masterwork", "Legendary" }
 
-local function give(path, n, quality)
+local function give(path, n, quality, shiny)
     n = n or 1
-    return cheat("&AddItem=" .. path .. "&Count=" .. n .. "&Quality=IQ_" .. string.upper(qualities[quality or 6]),
-        "got " .. n .. " x " .. string.match(path, "[^/]+$"))
+    return cheat("&AddItem=" .. path .. "&Count=" .. n .. "&Quality=IQ_" .. string.upper(qualities[quality or 6])
+        .. (shiny and "&Shiny=1" or ""), "got " .. n .. " x " .. string.match(path, "[^/]+$"))
 end
 
 local function credits(n)
     return cheat("&Credits=" .. n, "got " .. n .. " credits")
+end
+
+-- Everything in the game, maxed (tools/admin.py unlock_all). Relog if the synced inventory misses some of it.
+local function unlock_all()
+    return cheat("&UnlockAll=1", "unlocked everything (relog if something's missing)")
 end
 
 -- ---- SF dev panel (in game, F9) ----
@@ -684,14 +690,16 @@ local function items_tab()
     end
     ui.invqty = ImGuiSliderInt("how many", ui.invqty, 1, 100)
     ui.invqual = ImGuiCombo("weapon quality", ui.invqual, qualities)
+    local _, shiny = ImGuiCheckbox("moonsteel", ui.invshiny or false)
+    ui.invshiny = shiny
     if ImGuiButton("Give") and #ui.invshown > 0 then
-        act(give, ui.invshown[ui.invpick], ui.invqty, ui.invqual)
+        act(give, ui.invshown[ui.invpick], ui.invqty, ui.invqual, ui.invshiny)
     end
     ImGuiSeparatorText("Any item path")
     ui.invpath = ImGuiInputText("##path", ui.invpath)
     ImGuiSameLine()
     if ImGuiButton("Give##path") then
-        act(give, ui.invpath, ui.invqty, ui.invqual)
+        act(give, ui.invpath, ui.invqty, ui.invqual, ui.invshiny)
     end
     ImGuiSeparatorText("Credits")
     for i, n in ipairs({ 1000, 10000, 100000 }) do
@@ -699,6 +707,10 @@ local function items_tab()
         if ImGuiButton("+" .. n) then
             act(credits, n)
         end
+    end
+    ImGuiSeparatorText("Everything")
+    if ImGuiButton("Unlock all") then
+        act(unlock_all)
     end
     ImGuiTextWrapped("From this PC's server; the game re-reads your inventory, no relog needed.")
 end

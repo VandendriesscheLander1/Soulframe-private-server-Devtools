@@ -11,11 +11,12 @@ Usage:  python tools/admin.py [--as <email>] give <List> <ItemType> [count]   e.
         python tools/admin.py [--as <email>] show [Key]
         python tools/admin.py [--as <email>] load <inventory.json>              replace the inventory with that file
         python tools/admin.py [--as <email>] reset                              back to the starting inventory
+        python tools/admin.py [--as <email>] unlockall                          everything in the game, maxed (unlock_all)
         python tools/admin.py accounts                                          list them
         python tools/admin.py --selftest
 Without --as: the only account, or data/inventory.json while there are none.
 """
-import hashlib, hmac, json, math, os, secrets, pathlib, random, sys, tempfile, time, zlib
+import hashlib, hmac, json, math, os, secrets, pathlib, random, re, sys, tempfile, time, zlib
 import vendor as vendor_rules  # tools/vendor.py: the current vendor stock + package data
 
 import shop_rolls  # tools/shop_rolls.py: roll_tempers, the native weapon temper roll (ShopsDecode.md)
@@ -386,7 +387,8 @@ def give_starting_gear(inv, body):
 
 def dev_cheats(inv, body):
     """devCheats.php: the devs' cheat endpoint (DevImGuiTools posts &RerollAspect= to it, then syncs the inventory).
-    Ours, from the F9 panel (dev/dev.lua): &AddItem=<item or store item path>&Count=n[&Quality=IQ_...], &Credits=n.
+    Ours, from the F9 panel (dev/dev.lua): &AddItem=<item or store item path>&Count=n[&Quality=IQ_...][&Shiny=1],
+    &Credits=n, &UnlockAll=1 (unlock_all). Shiny=1 makes new gear moonsteel: "Shiny": true on the entry, as live moonsteel weapons have it.
     dummy_server.py only takes it from this PC."""
     q = body.get('_query', {})
     changes = {}
@@ -398,10 +400,146 @@ def dev_cheats(inv, body):
             changes.setdefault(name := stack_list_for(inv, item), []).extend(add_item(inv, name, item, count))
         else:
             raise ValueError(f'no item {item}')
+        if q.get('Shiny') == '1':  # grant/add_item put the same dicts in inv and changes
+            for e in (e for entries in changes.values() for e in entries if 'ItemId' in e):
+                e['Shiny'] = True
     if credits := int(q.get('Credits', 0)):
         inv['RegularCredits'] = inv.get('RegularCredits', 0) + credits
         changes['RegularCredits'] = credits
+    if q.get('UnlockAll') == '1':
+        unlock_all(inv)
     return {'InventoryChanges': changes}
+
+
+WIKI = 'Soulframe Wiki'  # the "made by" name on unlock_all's weapons
+# ponytail: rank 30 (LevelUpgrades has 31 entries) by Warframe's curve, weapons 500*r^2 and suits 1000*r^2; unverified
+# for Soulframe, but XP past the cap only clamps (a live Fencer pact sits at 5.8M). Raise these if ranks show short.
+WEAPON_XP, PACT_XP = 450_000, 900_000
+LOTS = {'MiscItems': 9999, 'Consumables': 99, 'Recipes': 99, 'RawUpgrades': 99}
+
+
+def unlock_all(inv):
+    """Everything an account can own, maxed: every weapon twice at Legendary (moonsteel and plain, made by WIKI),
+    every pact, armour/skin, totem, rune, temper, joinery (Kintsugi), mote, blueprint, flavour item; lots of every
+    resource and consumable; all skill trees, ancestors (Tuvalkane's crafts all done) and factions maxed; all owned
+    gear at max XP. Running it again only tops up. Logging in again shows everything (the panel syncs too).
+    ponytail: pets (KubrowPets) and quests are left alone; the ancestor rank quests aren't marked done."""
+    P = vendor_rules.packages()
+    store = {a['TypeName']: (k, a) for k, v in P.items() if k.startswith('/SF/StoreItems/') and '/Types/Game/' not in k
+             and 'TypeName' in (a := v['attributes']) and not a.get('LocalizeTag', '').startswith('[HC]')}
+    cat = lambda *cs: [t for t, (_, a) in store.items() if a.get('ProductCategory') in cs]
+    owned = lambda name: {i['ItemType'] for i in inv.get(name, [])}
+
+    def gear(name, item_type, **extra):
+        inv.setdefault(name, []).append({'ItemId': {'$oid': new_oid()}, 'ItemType': item_type, 'IgnoreBinCount': True, **extra})
+
+    def top_up(name, item_type, n):
+        it = next((i for i in inv.setdefault(name, []) if i.get('ItemType') == item_type and 'ItemCount' in i), None)
+        if it is None:
+            inv[name].append({'ItemCount': n, 'ItemType': item_type})
+        else:
+            it['ItemCount'] = max(it['ItemCount'], n)
+
+    # Weapons: one moonsteel and one plain of each, Legendary with rolled tempers.
+    for t in cat('Melee', 'LongGuns'):
+        name = store[t][1]['ProductCategory']
+        for shiny in (True, False):
+            if not any(w['ItemType'] == t and w.get('Creator') == WIKI and bool(w.get('Shiny')) == shiny for w in inv.get(name, [])):
+                w = new_weapon(store[t][0], 'IQ_LEGENDARY') | {'Creator': WIKI, 'IgnoreBinCount': True}
+                inv.setdefault(name, []).append(w | ({'Shiny': True} if shiny else {}))
+    for t in set(cat('Suits')) - owned('Suits'):  # pacts
+        gear('Suits', t)
+    for t in set(cat('WeaponSkins')) - owned('WeaponSkins'):  # armour, hair, totem looks, ...
+        gear('WeaponSkins', t)
+    for t in set(cat('FlavourItems')) - owned('FlavourItems'):  # titles, palettes, emotes, portraits
+        inv.setdefault('FlavourItems', []).append({'ItemType': t})
+
+    # Max XP on all gear, and in XPInfo (what the game counts toward mastery).
+    for name, xp in (('Melee', WEAPON_XP), ('LongGuns', WEAPON_XP), ('Suits', PACT_XP)):
+        for g in inv.get(name, []):
+            g['XP'] = max(g.get('XP', 0), xp)
+            info = inv.setdefault('XPInfo', [])
+            upsert(info, 'ItemType', {'ItemType': g['ItemType'],
+                                      'XP': max([xp] + [i['XP'] for i in info if i['ItemType'] == g['ItemType']])})
+
+    # Upgrades: runes and totems at max level, skill trees fully learned, the rest (tempers, joinery, motes) as stacks.
+    have = owned('Upgrades') | {t['ItemType'] for t in inv.get('SkillTrees', [])}
+    for t in cat('Upgrades'):
+        if t.startswith(('/SF/Upgrades/Runes/', '/SF/Upgrades/Totems/')) and t in have:
+            continue
+        if t.startswith('/SF/Upgrades/Runes/'):
+            gear('Upgrades', t, UpgradeFingerprint=json.dumps({'lvl': 3}))
+        elif t.startswith('/SF/Upgrades/Totems/'):
+            chain, k = [], t
+            while k in P:
+                chain.append(k)
+                k = P[k].get('parent')
+            pol = next(m[1].upper() for c in chain if (m := re.search(r'SFTotemsBase(Courage|Grace|Spirit)Upgrade$', c)))
+            gear('Upgrades', t, UpgradeFingerprint=json.dumps(
+                {'compat': '/SF/Types/Game/SFSkillTree', 'pol': f'AP_{pol}', 'lvl': (attr(t, 'FusionLimitRange') or [3, 3])[1]}))
+        elif t.endswith('SkillTree'):
+            upsert(inv.setdefault('SkillTrees', []), 'ItemType', {'ItemType': t, 'Skills': skill_tree(t)})
+        elif not t.startswith('/SF/Types/Items/Aspects/') or '/Tempers/' in t:  # not the aspect manifests
+            top_up('RawUpgrades', t, LOTS['RawUpgrades'])
+
+    # Stacks: blueprints, consumables, every resource (most have no store item), boons, keys, ...
+    for t in cat('Recipes'):
+        top_up('Recipes', t, LOTS['Recipes'])
+    for t in cat('Consumables'):
+        top_up('Consumables', t, LOTS['Consumables'])
+    misc = [t for t in cat('MiscItems') if not re.search(r'/Quests/|/Enemies/|/Weapons/', t)]
+    misc += [k for k, v in P.items() if k.startswith('/SF/Types/PickUps/Resources/') and '/Bundles/' not in k
+             and 'LocalizeTag' in v['attributes']]  # as devlua.py's Resources list
+    for t in dict.fromkeys(misc):
+        top_up('MiscItems', t, LOTS['MiscItems'])
+
+    # Ancestors at their last rank. Their CompletedRecipes are the crafts done at them (Tuvalkane: every weapon at
+    # every quality, armour, ingots; Verminia: elixirs, palettes); Foundry.lua unlocks the next one from that list.
+    brew = ('/Recipes/Elixers/', '/Recipes/Consumeables/', '/Recipes/ColorPalettes/', '/Recipes/Holiday/')
+    crafts = {True: [], False: []}
+    for r in cat('Recipes'):
+        if result := attr(attr(r, 'ResultItem') or '', 'TypeName'):
+            crafts[any(b in r for b in brew)].append(result)
+    crafts[False] += [f'{t}_{q}' for t in cat('Melee', 'LongGuns') for q in QUALITIES[1:]]
+    for k in (k for k, v in P.items() if k.startswith('/SF/Types/Game/Ancestors/') and 'Ranks' in v['attributes']):
+        ranks = P[k]['attributes']['Ranks']
+        a = next((a for a in inv.setdefault('Ancestors', []) if a['ItemType'] == k), None)
+        if a is None:
+            inv['Ancestors'].append(a := {'ItemType': k})
+        a |= {'Rank': len(ranks) - 1, 'XP': max(a.get('XP', 0), ranks[-1].get('RequiredXP', 0))}
+        if '/Tuvalkane/' in k or '/Verminia/' in k:
+            a['CompletedRecipes'] = list(dict.fromkeys(a.get('CompletedRecipes', []) + crafts['/Verminia/' in k]))
+
+    # Factions at their top title.
+    for k in (k for k in P if k.startswith('/SF/Syndicates/')):
+        titles = P[k]['attributes'].get('Titles') or []
+        if titles:
+            f = next((f for f in inv.setdefault('Affiliations', []) if f['Tag'] == k.rsplit('/', 1)[1]), None)
+            if f is None:
+                inv['Affiliations'].append(f := {'Tag': k.rsplit('/', 1)[1], 'EncounterPaths': [], 'FreeFavorsUsed': []})
+            f |= {'Initiated': True, 'Title': max(t['level'] for t in titles),
+                  'Standing': max(f.get('Standing', 0), max(t['maxXP'] for t in titles)), 'FreeFavorsEarned': [1, 2, 3, 4, 5]}
+
+    for key, n in (('RegularCredits', 99_999_999), ('PremiumCredits', 999_999), ('FusionPoints', 9_999_999)):
+        inv[key] = max(inv.get(key, 0), n)
+    for key in ('WeaponBin', 'SuitBin', 'UniversalBin'):  # room for all of it; given gear also ignores the bins
+        inv[key] = (b := inv.get(key) or {'Slots': 0}) | {'Slots': max(b.get('Slots', 0), 300)}
+
+
+def skill_tree(tree):
+    """Every skill of a skill tree (its Children, paths relative to /SF/Upgrades/Techniques/) at its top level.
+    ponytail: the top level is a reading of a live account: weapon skills stop at len(Levels) - 1 (CritChance, 3 Levels,
+    sits at 2), pact skills (FusionLimit QA_MEDIUM) at 3."""
+    skills, todo = [], list(attr(tree, 'Children') or [])
+    while todo:
+        node = todo.pop(0)
+        todo += node.get('children') or []
+        if not node.get('skill'):  # an empty node (a branch point)
+            continue
+        s = node['skill'] if node['skill'].startswith('/') else '/SF/Upgrades/Techniques/' + node['skill']
+        top = 3 if attr(s, 'FusionLimit') == 'QA_MEDIUM' else max(len(attr(s, 'Levels') or []) - 1, 0)
+        skills.append((node['index'], {'ItemType': s, 'Level': top}))
+    return [s for _, s in sorted(skills, key=lambda s: s[0])]
 
 
 def dismantle_loot(item):
@@ -525,9 +663,9 @@ def main(args):
                 raise SystemExit(f'no account {email}; see: python tools/admin.py accounts')
             INV = inventory_path(acct)
             return main(rest)
-        case [cmd, *_] if cmd in ('give', 'set', 'show', 'load', 'reset') and len(accts := accounts()) > 1:
+        case [cmd, *_] if cmd in ('give', 'set', 'show', 'load', 'reset', 'unlockall') and len(accts := accounts()) > 1:
             raise SystemExit(f'{len(accts)} accounts: pick one with --as <email>')
-        case [cmd, *_] if cmd in ('give', 'set', 'show', 'load', 'reset') and (accts := accounts()):
+        case [cmd, *_] if cmd in ('give', 'set', 'show', 'load', 'reset', 'unlockall') and (accts := accounts()):
             INV = inventory_path(next(iter(accts.values())))
     match args:
         case ['give', list_name, item_type, *n]:
@@ -548,6 +686,11 @@ def main(args):
             INV.parent.mkdir(parents=True, exist_ok=True)
             save(inv)
             print(f'loaded {file}: log in again (restart the game) to see it')
+        case ['unlockall']:
+            inv = load()
+            unlock_all(inv)
+            save(inv)
+            print('unlocked everything: log in again (restart the game) to see it')
         case ['reset']:
             INV.unlink(missing_ok=True)
             print('reset: the next inventory.php serves the starting inventory again')
@@ -691,11 +834,29 @@ def selftest_tutorial(inv):
     sword = '/SF/Weapons/Melee/OneHand/BromiusCleaver/BromiusCleaverMeleeWeapon'
     r = dev_cheats(fresh_inv, {'_query': {'AddItem': sword, 'Count': '2', 'Quality': 'IQ_NOBLE', 'Credits': '500'}})
     assert [m['Quality'] for m in r['InventoryChanges']['Melee']] == ['IQ_NOBLE'] * 2 and fresh_inv['RegularCredits'] == 500, r
+    assert not any('Shiny' in m for m in fresh_inv['Melee'])
+    dev_cheats(fresh_inv, {'_query': {'AddItem': sword, 'Shiny': '1'}})
+    assert fresh_inv['Melee'][-1]['Shiny'] is True and fresh_inv['Melee'][-1]['ItemType'] == sword
     dev_cheats(fresh_inv, {'_query': {'AddItem': '/SF/Types/Items/Consumables/HealingPotion', 'Count': '3'}})
     assert fresh_inv['Consumables'] == [{'ItemCount': 3, 'ItemType': '/SF/Types/Items/Consumables/HealingPotion'}]
     iron = '/SF/Types/PickUps/Resources/ScrapMetals/ScrapIronResource'
     dev_cheats(fresh_inv, {'_query': {'AddItem': iron, 'Count': '40'}})
     assert fresh_inv['MiscItems'] == [{'ItemCount': 40, 'ItemType': iron}]
+    dev_cheats(fresh_inv, {'_query': {'UnlockAll': '1'}})
+    mine = [w for w in fresh_inv['Melee'] + fresh_inv['LongGuns'] if w.get('Creator') == WIKI]
+    assert len(mine) == 2 * len({w['ItemType'] for w in mine}) > 50 and sum(bool(w.get('Shiny')) for w in mine) == len(mine) // 2
+    assert all(w['Quality'] == 'IQ_LEGENDARY' and w['XP'] >= WEAPON_XP for w in mine)
+    assert next(i for i in fresh_inv['MiscItems'] if i['ItemType'] == iron)['ItemCount'] == LOTS['MiscItems']
+    tuv = next(a for a in fresh_inv['Ancestors'] if a['ItemType'].endswith('/TuvalkaneAncestor'))
+    assert tuv['Rank'] == 3 and f'{sword}_IQ_LEGENDARY' in tuv['CompletedRecipes']
+    trees = {t['ItemType']: t['Skills'] for t in fresh_inv['SkillTrees']}
+    assert {'Level': 2, 'ItemType': '/SF/Upgrades/Techniques/Polearm/CritChanceSkill'} in trees['/SF/Upgrades/Techniques/PolearmSkillTree']
+    totem = next(u for u in fresh_inv['Upgrades'] if u['ItemType'] == '/SF/Upgrades/Totems/DamageRip')
+    assert json.loads(totem['UpgradeFingerprint'])['pol'] == 'AP_COURAGE'
+    assert all(f['Title'] == 5 for f in fresh_inv['Affiliations']) and len(fresh_inv['Affiliations']) == 4
+    before = json.dumps(fresh_inv, sort_keys=True)
+    unlock_all(fresh_inv)  # again: tops up, adds nothing
+    assert len(json.dumps(fresh_inv, sort_keys=True)) == len(before)
 
 
 if __name__ == '__main__':
