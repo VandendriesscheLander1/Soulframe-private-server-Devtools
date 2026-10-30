@@ -218,3 +218,21 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# --- Soulframe private server ---
+# Build output
+/target/
+/bootstrap/target/
+# Local state: accounts, saves, game-extracted seed data, traffic logs
+/data/
+/captures/
+*.sqlite
+# Private keys / certs are generated per machine
+/certs/
+*.key
+# Research notes, not needed to run anything
+/findings/
+/PLAN.md
+# Editor / agent config
+/.claude/
+/.vscode/

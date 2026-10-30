@@ -1,0 +1,720 @@
+{
+  "Affiliations": [
+    {
+      "Initiated": true,
+      "Tag": "ChampionSyndicate"
+    }
+  ],
+  "Ancestors": [
+    {
+      "ItemType": "/SF/Types/Game/Ancestors/Orlick/OrlickAncestor",
+      "Rank": 0
+    }
+  ],
+  "CalendarProgress": {
+    "Iteration": 13,
+    "SeasonProgress": {
+      "ActivatedChallenges": [],
+      "LastCompletedChallengeDayIdx": -1,
+      "LastCompletedDayIdx": -1,
+      "SeasonType": "CST_SUMMER"
+    },
+    "Version": 19,
+    "YearProgress": {
+      "Upgrades": []
+    }
+  },
+  "ChallengeProgress": [
+    {
+      "Name": "DistanceTraveledTitleChallenge",
+      "Progress": 4968
+    },
+    {
+      "Name": "FinisherKillsTitleChallenge",
+      "Progress": 4
+    },
+    {
+      "Complete": true,
+      "Name": "KillWithoutTakingDamageTitleChallenge",
+      "Progress": 5
+    },
+    {
+      "Name": "OdeKillTitleChallenge",
+      "Progress": 27
+    },
+    {
+      "Name": "KillWhileLowHealthTitleChallenge",
+      "Progress": 1
+    }
+  ],
+  "Consumables": [
+    {
+      "ItemCount": 1,
+      "ItemType": "/SF/Types/Items/Consumables/HealingPotion",
+      "LastAdded": {
+        "$oid": "6ae24158a807b6e8990bcf2d"
+      }
+    }
+  ],
+  "Created": {
+    "$date": {
+      "$numberLong": "1762292361470"
+    }
+  },
+  "CurrentLoadOutIds": [
+    {
+      "$oid": "6ae2364b2fdfbc698dd421b6"
+    },
+    {
+      "$oid": "6ae2364b2fdfbc698dd421b7"
+    },
+    {
+      "$oid": "6ae2364b2fdfbc698dd421b8"
+    }
+  ],
+  "DailyAffiliation": 16000,
+  "DailyAffiliationOde": 16000,
+  "EnvoyBodyType": true,
+  "EquippedGear": [
+    "/SF/Types/Items/Consumables/HealingPotion"
+  ],
+  "FlavourItems": [
+    {
+      "ItemType": "/SF/Types/Items/AttributeItems/DynamicVirtues"
+    },
+    {
+      "ItemType": "/SF/Types/StoreItems/AvatarImages/AvatarImageSoulframeDefault"
+    },
+    {
+      "ItemType": "/SF/Types/Items/Titles/KillWithoutTakingDamageTitle"
+    }
+  ],
+  "FusionPoints": 0,
+  "GiftsRemaining": 8,
+  "HasResetAccount": false,
+  "LastInventorySync": {
+    "$oid": "6ae24b8689fb0c3f320da748"
+  },
+  "LoadOutPresets": {
+    "NORMAL": [
+      {
+        "Favorite": false,
+        "ItemId": {
+          "$oid": "6ae2364b2fdfbc698dd421b6"
+        },
+        "PresetIcon": "",
+        "m": {
+          "ItemId": {
+            "$oid": "6ae23a8c9a540f26f40fad0a"
+          },
+          "cus": 0,
+          "mod": 0
+        },
+        "s": {
+          "ItemId": {
+            "$oid": "6ae23a8c9a540f26f40fad08"
+          },
+          "cus": 0,
+          "mod": 0
+        },
+        "v": "/SF/Types/Items/AttributeItems/DynamicVirtues",
+        "vu": 0.33333334,
+        "vv": 0.33333334
+      }
+    ],
+    "NORMAL_PVP": [
+      {
+        "Favorite": false,
+        "ItemId": {
+          "$oid": "6ae2364b2fdfbc698dd421b8"
+        },
+        "PresetIcon": "",
+        "m": {
+          "ItemId": {
+            "$oid": "6ae23a8c9a540f26f40fad0a"
+          },
+          "cus": 0,
+          "mod": 0
+        }
+      }
+    ],
+    "SENTINEL": [
+      {
+        "Favorite": false,
+        "ItemId": {
+          "$oid": "6ae2364b2fdfbc698dd421b7"
+        },
+        "PresetIcon": ""
+      }
+    ]
+  },
+  "LoginDaysConsecutive": 1,
+  "LoreFragmentScans": [
+    {
+      "Date": {
+        "$date": {
+          "$numberLong": "1793211020943"
+        }
+      },
+      "ItemType": "/SF/Types/Lore/FablesLore/WarsongPrologueLoreFragment",
+      "Progress": 1,
+      "Read": false,
+      "Redeemed": false,
+      "Region": ""
+    },
+    {
+      "Date": {
+        "$date": {
+          "$numberLong": "1793211103777"
+        }
+      },
+      "ItemType": "/SF/Types/Lore/MapTreeLoreFragmentMidrath",
+      "Progress": 1,
+      "Read": false,
+      "Redeemed": false,
+      "Region": ""
+    },
+    {
+      "Date": {
+        "$date": {
+          "$numberLong": "1793211404968"
+        }
+      },
+      "ItemType": "/SF/Types/Lore/FablesLore/FirstLoginQuestLoreFragment",
+      "Progress": 1,
+      "Read": false,
+      "Redeemed": false,
+      "Region": ""
+    },
+    {
+      "Date": {
+        "$date": {
+          "$numberLong": "1793211438428"
+        }
+      },
+      "ItemType": "/SF/Types/Quests/LocationLoreQuests/TowerCampLoreFragment",
+      "Progress": 0,
+      "Read": false,
+      "Redeemed": false,
+      "Region": ""
+    },
+    {
+      "Date": {
+        "$date": {
+          "$numberLong": "1793211554673"
+        }
+      },
+      "ItemType": "/SF/Types/Lore/CharacterLore/OrlickCharacterLoreFragment",
+      "Progress": 0,
+      "Read": false,
+      "Redeemed": false,
+      "Region": ""
+    },
+    {
+      "Date": {
+        "$date": {
+          "$numberLong": "1793211554673"
+        }
+      },
+      "ItemType": "/SF/Types/Lore/FablesLore/OrlickQuestLoreFragment",
+      "Progress": 1,
+      "Read": false,
+      "Redeemed": false,
+      "Region": ""
+    },
+    {
+      "Date": {
+        "$date": {
+          "$numberLong": "1793212772070"
+        }
+      },
+      "ItemType": "/SF/Types/Lore/CharacterLore/AvakotCharacterLoreFragment",
+      "Progress": 0,
+      "Read": false,
+      "Redeemed": false,
+      "Region": ""
+    },
+    {
+      "Date": {
+        "$date": {
+          "$numberLong": "1793212798584"
+        }
+      },
+      "ItemType": "/SF/Types/Quests/LocationLoreQuests/UCRuinsMapLoreFragment",
+      "Progress": 0,
+      "Read": false,
+      "Redeemed": false,
+      "Region": ""
+    },
+    {
+      "Date": {
+        "$date": {
+          "$numberLong": "1793212869880"
+        }
+      },
+      "ItemType": "/SF/Types/Quests/LocationLoreQuests/UnderCityNeighborhoodLocationLoreFragment",
+      "Progress": 0,
+      "Read": false,
+      "Redeemed": false,
+      "Region": ""
+    },
+    {
+      "Date": {
+        "$date": {
+          "$numberLong": "1793212890806"
+        }
+      },
+      "ItemType": "/SF/Types/Quests/LocationLoreQuests/UnderCityPortCityLocationLoreFragment",
+      "Progress": 0,
+      "Read": false,
+      "Redeemed": false,
+      "Region": ""
+    },
+    {
+      "Date": {
+        "$date": {
+          "$numberLong": "1793213131984"
+        }
+      },
+      "ItemType": "/SF/Types/Quests/LocationLoreQuests/UCCurlailNorthMapLoreFragment",
+      "Progress": 0,
+      "Read": false,
+      "Redeemed": false,
+      "Region": ""
+    },
+    {
+      "Date": {
+        "$date": {
+          "$numberLong": "1793213197096"
+        }
+      },
+      "ItemType": "/SF/Types/Quests/LocationLoreQuests/HamletCampLoreFragment",
+      "Progress": 0,
+      "Read": false,
+      "Redeemed": false,
+      "Region": ""
+    },
+    {
+      "Date": {
+        "$date": {
+          "$numberLong": "1793213256411"
+        }
+      },
+      "ItemType": "/SF/Types/Quests/LocationLoreQuests/GladeEntranceCampLoreFragment",
+      "Progress": 0,
+      "Read": false,
+      "Redeemed": false,
+      "Region": ""
+    },
+    {
+      "Date": {
+        "$date": {
+          "$numberLong": "1793213262408"
+        }
+      },
+      "ItemType": "/SF/Types/Quests/LocationLoreQuests/GladesGarrenMapLoreFragment",
+      "Progress": 0,
+      "Read": false,
+      "Redeemed": false,
+      "Region": ""
+    },
+    {
+      "Date": {
+        "$date": {
+          "$numberLong": "1793213322000"
+        }
+      },
+      "ItemType": "/SF/Types/Lore/TutorialLore/TempersTutorialFragment",
+      "Progress": 7,
+      "Read": true,
+      "Redeemed": false,
+      "Region": ""
+    },
+    {
+      "Date": {
+        "$date": {
+          "$numberLong": "1793213610315"
+        }
+      },
+      "ItemType": "/SF/Types/Lore/CharacterLore/DeoraCharacterLoreFragment",
+      "Progress": 0,
+      "Read": false,
+      "Redeemed": false,
+      "Region": ""
+    },
+    {
+      "Date": {
+        "$date": {
+          "$numberLong": "1793213610315"
+        }
+      },
+      "ItemType": "/SF/Types/Lore/CharacterLore/GarrenRoodCharacterLoreFragment",
+      "Progress": 0,
+      "Read": false,
+      "Redeemed": false,
+      "Region": ""
+    },
+    {
+      "Date": {
+        "$date": {
+          "$numberLong": "1793213610315"
+        }
+      },
+      "ItemType": "/SF/Types/Lore/FablesLore/TheTormentStagLoreFragment",
+      "Progress": 1,
+      "Read": false,
+      "Redeemed": false,
+      "Region": ""
+    },
+    {
+      "Date": {
+        "$date": {
+          "$numberLong": "1793215079195"
+        }
+      },
+      "ItemType": "/SF/Types/Lore/TutorialLore/WeatherEffectsFragment",
+      "Progress": 4,
+      "Read": false,
+      "Redeemed": false,
+      "Region": ""
+    },
+    {
+      "Date": {
+        "$date": {
+          "$numberLong": "1793215220250"
+        }
+      },
+      "ItemType": "/SF/Types/Quests/LocationLoreQuests/ChampionHubLocationLoreFragment",
+      "Progress": 0,
+      "Read": false,
+      "Redeemed": false,
+      "Region": ""
+    },
+    {
+      "Date": {
+        "$date": {
+          "$numberLong": "1793215276496"
+        }
+      },
+      "ItemType": "/SF/Types/Lore/MidrathHubKeysLoreFragement",
+      "Progress": 1,
+      "Read": false,
+      "Redeemed": false,
+      "Region": ""
+    }
+  ],
+  "Mailbox": {
+    "LastInboxId": {
+      "$oid": "6ae2364db0a817a18004bada"
+    }
+  },
+  "Melee": [
+    {
+      "AspectFingerprint": {
+        "buffs": [
+          {
+            "Tag": "ConsecutiveAfterHeavyMod",
+            "Value": 585836901
+          }
+        ],
+        "curses": []
+      },
+      "AspectType": "/SF/Types/Items/Aspects/DendritLightMeleeAspectManifest",
+      "Configs": [
+        {
+          "Skins": [
+            "",
+            "",
+            "",
+            "/SF/Types/Game/HolsterInfo/DualSwordHips"
+          ]
+        }
+      ],
+      "Features": 2,
+      "IgnoreBinCount": true,
+      "IsNew": true,
+      "ItemId": {
+        "$oid": "6ae23a8c9a540f26f40fad0a"
+      },
+      "ItemType": "/SF/Weapons/Melee/OneHand/StarterSword/StarterSwordMeleeWeapon",
+      "Quality": "IQ_MILITARY",
+      "XP": 7498
+    }
+  ],
+  "MiscItems": [
+    {
+      "ItemCount": 1,
+      "ItemType": "/SF/Types/Items/FactionItems/ChampionSyndicateRepToken"
+    },
+    {
+      "ItemCount": 3,
+      "ItemType": "/SF/Types/PickUps/Resources/Organics/Flowers/MourningBellResource"
+    },
+    {
+      "ItemCount": 2,
+      "ItemType": "/SF/Types/PickUps/Resources/Textiles/BrineflossResource"
+    },
+    {
+      "ItemCount": 4,
+      "ItemType": "/SF/Types/PickUps/Resources/Inorganics/OdeGraphiteResource"
+    },
+    {
+      "ItemCount": 2,
+      "ItemType": "/SF/Types/PickUps/Resources/Inorganics/CorruptOnyxResource"
+    },
+    {
+      "ItemCount": 3,
+      "ItemType": "/SF/Types/PickUps/Resources/Inorganics/IchorResource"
+    },
+    {
+      "ItemCount": 3,
+      "ItemType": "/SF/Types/PickUps/Resources/ScrapMetals/ScrapIronResource"
+    },
+    {
+      "ItemCount": 1,
+      "ItemType": "/SF/Types/PickUps/Resources/Organics/Flowers/MorasKissResource"
+    }
+  ],
+  "MotherCustomization": {
+    "Skins": [
+      "/SF/Upgrades/Skins/Mother/Hair2Helmet"
+    ],
+    "haircol": {
+      "en": -15395563,
+      "t0": -15395563,
+      "t1": -15395563,
+      "t2": -15395563,
+      "t3": -15395563
+    },
+    "pricol": {
+      "t0": -2143014100,
+      "t2": -12751238,
+      "t3": -11365469
+    }
+  },
+  "NextRefill": {
+    "$date": {
+      "$numberLong": "1793232000000"
+    }
+  },
+  "NodeIntrosCompleted": [
+    "MapMarkerTutorial",
+    "P16"
+  ],
+  "PendingCoupon": {
+    "Discount": 0,
+    "Expiry": {
+      "$date": {
+        "$numberLong": "0"
+      }
+    }
+  },
+  "PlayerLevel": 1,
+  "PremiumCredits": 100,
+  "PremiumCreditsFree": 100,
+  "PrimeTokens": 0,
+  "PveBonusLoadoutBin": {
+    "Slots": 4
+  },
+  "QuestChallenges": [],
+  "Quests": [
+    {
+      "Completed": "DKxzZWyi",
+      "CompletionDate": {
+        "$date": {
+          "$numberLong": "1793210024245"
+        }
+      },
+      "ItemType": "/SF/Types/Quests/WarsongPrologueQuest"
+    },
+    {
+      "Completed": "YNC0XIhL",
+      "CompletionDate": {
+        "$date": {
+          "$numberLong": "1793211404971"
+        }
+      },
+      "ItemType": "/SF/Types/Quests/PreAlpha/Q1WakeUp"
+    },
+    {
+      "Completed": "zZhKqnxQ",
+      "CompletionDate": {
+        "$date": {
+          "$numberLong": "1793211554673"
+        }
+      },
+      "ItemType": "/SF/Types/Quests/AncestorProgression/OrlickProgression/OrlickDiscoveryQuest"
+    },
+    {
+      "Completed": "KMGUrXlz",
+      "CompletionDate": {
+        "$date": {
+          "$numberLong": "1793215244422"
+        }
+      },
+      "ItemType": "/SF/Types/Quests/FactionQuests/InitiateFactionQuest"
+    },
+    {
+      "Completed": "YNC0XIhL",
+      "CompletionDate": {
+        "$date": {
+          "$numberLong": "1793213685487"
+        }
+      },
+      "ItemType": "/SF/Types/Quests/TCDemoQuest"
+    }
+  ],
+  "RandomModBin": {
+    "Slots": 1000
+  },
+  "RawUpgrades": [
+    {
+      "ItemCount": 1,
+      "ItemType": "/SF/Upgrades/Runes/Weapon/LongBlade/StarterRune",
+      "LastAdded": {
+        "$oid": "6ae2438ae9f5283c81049aab"
+      }
+    }
+  ],
+  "ReceivedStartingGear": true,
+  "Recipes": [
+    {
+      "ItemCount": 1,
+      "ItemType": "/SF/Types/Recipes/Armor/GarrenHelmBlueprint"
+    },
+    {
+      "ItemCount": 1,
+      "ItemType": "/SF/Types/Recipes/Armor/GarrenLegsBlueprint"
+    },
+    {
+      "ItemCount": 1,
+      "ItemType": "/SF/Types/Recipes/Armor/GarrenTorsoBlueprint"
+    },
+    {
+      "ItemCount": 1,
+      "ItemType": "/SF/Types/Recipes/Pacts/GarrenPactBlueprint"
+    },
+    {
+      "ItemCount": 1,
+      "ItemType": "/SF/Types/Recipes/Weapons/GarrenSwordBlueprint"
+    }
+  ],
+  "RegularCredits": 229,
+  "RewardSeed": -7972633514889007745,
+  "SparrowCustomization": {
+    "Skins": [
+      "",
+      "",
+      "/SF/Upgrades/Skins/Sparrow/SparrowBody"
+    ]
+  },
+  "SubscribedToEmails": 0,
+  "SubscribedToEmailsPersonalized": 0,
+  "SuitBin": {
+    "Slots": 3
+  },
+  "Suits": [
+    {
+      "Configs": [
+        {
+          "Skins": [
+            "6ae23a8c9a540f26f40fad0d",
+            "/SF/Upgrades/Skins/Sleeve/PothiaSleeve",
+            "6ae23a8c9a540f26f40fad0b",
+            "6ae23a8c9a540f26f40fad0c",
+            "6ae23a8c9a540f26f40fad0f",
+            "6ae23a8c9a540f26f40fad09",
+            "6ae23a8c9a540f26f40fad0e"
+          ],
+          "haircol": {
+            "en": -15395563,
+            "t0": -15395563,
+            "t1": -15395563,
+            "t2": -15395563,
+            "t3": -15395563
+          },
+          "pricol": {
+            "t0": -2143014100,
+            "t2": -12751238,
+            "t3": -11365469
+          }
+        }
+      ],
+      "Features": 2,
+      "IgnoreBinCount": true,
+      "IsNew": true,
+      "ItemId": {
+        "$oid": "6ae23a8c9a540f26f40fad08"
+      },
+      "ItemType": "/SF/Souls/Default/ChampionSoul",
+      "XP": 21498
+    }
+  ],
+  "SupportedSyndicate": "ChampionSyndicate",
+  "TradesRemaining": 1,
+  "UniversalBin": {
+    "Slots": 50
+  },
+  "WeaponBin": {
+    "Slots": 6
+  },
+  "WeaponSkins": [
+    {
+      "IgnoreBinCount": true,
+      "ItemId": {
+        "$oid": "6ae23a8c9a540f26f40fad09"
+      },
+      "ItemType": "/SF/Upgrades/Skins/Totem/ChampionHubTotem"
+    },
+    {
+      "IgnoreBinCount": true,
+      "ItemId": {
+        "$oid": "6ae23a8c9a540f26f40fad0b"
+      },
+      "ItemType": "/SF/Upgrades/Skins/Body/StarterCourageBody"
+    },
+    {
+      "IgnoreBinCount": true,
+      "ItemId": {
+        "$oid": "6ae23a8c9a540f26f40fad0c"
+      },
+      "ItemType": "/SF/Upgrades/Skins/Legs/StarterCourageLegs"
+    },
+    {
+      "IgnoreBinCount": true,
+      "ItemId": {
+        "$oid": "6ae23a8c9a540f26f40fad0d"
+      },
+      "ItemType": "/SF/Upgrades/Skins/Helmets/StarterCourageHelmet"
+    },
+    {
+      "IgnoreBinCount": true,
+      "ItemId": {
+        "$oid": "6ae23a8c9a540f26f40fad0e"
+      },
+      "ItemType": "/SF/Upgrades/Skins/Head/ForgetFire5Head"
+    },
+    {
+      "IgnoreBinCount": true,
+      "ItemId": {
+        "$oid": "6ae23a8c9a540f26f40fad0f"
+      },
+      "ItemType": "/SF/Upgrades/Skins/Helmets/Hair2AHelmet"
+    }
+  ],
+  "WorldSpawnPosition": [
+    -575.46503,
+    -63.625092,
+    -355.85623
+  ],
+  "XPInfo": [
+    {
+      "ItemType": "/SF/Souls/Default/ChampionSoul",
+      "XP": 21498
+    },
+    {
+      "ItemType": "/SF/Weapons/Melee/OneHand/StarterSword/StarterSwordMeleeWeapon",
+      "XP": 7498
+    }
+  ]
+}

@@ -1,0 +1,61 @@
+{
+ "BuildLabel": "2026.10.08.15.20/royCx9jS8q8LOO1lA9DarA",
+ "ClientType": "STM",
+ "ConsentNeeded": false,
+ "CountryCode": "US",
+ "CountrySubDivisionCode": "",
+ "CrossPlatformAllowed": false,
+ "CrossPlatformGuildsAllowed": true,
+ "CrossPlatformTradingAllowed": false,
+ "CrossSaveAllowed": false,
+ "DisplayName": "sfprivate",
+ "ForceLogoutVersion": 0,
+ "HUB": "https://arbiter.soulframe.com/api/",
+ "IRC": [
+  "127.0.0.1"
+ ],
+ "LastLogin": {
+  "$date": {
+   "$numberLong": "1793215006096"
+  }
+ },
+ "LastPlatform": 0,
+ "MatchmakingBuildId": "8545160210229520451",
+ "NRS": [
+  "127.0.0.1"
+ ],
+ "Nonce": 1234567890,
+ "OneTimeConsumes": [],
+ "StatsEventFilters": [
+  {
+   "key": "Default",
+   "threshold": 100
+  }
+ ],
+ "SteamIdBound": false,
+ "Token": "00000000000000000000000000000000000000000000000000000000000000000000000000000000",
+ "TokenTTL": 4154,
+ "TrackedBundleStats": [
+  "DIE",
+  "HEALING",
+  "HEAL_BUDDY",
+  "USE_ABILITY",
+  "USE_ABILITY_COMPANION",
+  "KILL_ENEMY_STEALTH",
+  "NPC_USE_ABILITY",
+  "NPC_MELEE_ATTACK",
+  "KILL_ENEMY"
+ ],
+ "UseSocialDBCollections": true,
+ "id": "5f0000000000000000000001",
+ "platformCDNs": [
+  "https://api.soulframe.com/cdn/"
+ ],
+ "step": 0,
+ "wallet": {
+  "NegativeBalance": false,
+  "OtherWallet": false,
+  "PremiumCredits": 0,
+  "PrimeTokens": 0
+ }
+}

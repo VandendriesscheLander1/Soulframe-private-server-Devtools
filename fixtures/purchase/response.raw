@@ -1,0 +1,1 @@
+{"InventoryChanges":{"MiscItems":[{"ItemType":"/SF/Types/PickUps/Resources/Organics/GossamerQuartzResource","ItemCount":1}],"RegularCredits":-150,"NewVendorPurchase":{"VendorType":"/SF/Types/Game/AvakotVendorManifest","PurchaseHistory":[{"ItemId":"6ad1bc732c6ca7ea9e4a9464","NumPurchased":1,"Expiry":{"$date":{"$numberLong":"1793296800000"}}}]}}}

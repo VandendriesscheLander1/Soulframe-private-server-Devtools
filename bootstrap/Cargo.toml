@@ -1,0 +1,15 @@
+[package]
+name = "sf-bootstrap"
+version = "0.1.0"
+edition = "2021"
+description = "Injected into the sandboxed P16H6 copy only: *.soulframe.com -> 127.0.0.1, TLS checks off (findings/0013)."
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+hudhook = { version = "0.9", default-features = false, features = ["dx11"] }
+retour = "0.3"
+
+[profile.release]
+panic = "abort"

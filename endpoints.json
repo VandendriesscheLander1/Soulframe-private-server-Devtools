@@ -1,0 +1,496 @@
+{
+  "build": "P16H6",
+  "captures": [
+    "20261028T180611886Z",
+    "20261028T192124134Z"
+  ],
+  "endpoints": [
+    {
+      "method": "GET",
+      "host": "api.soulframe.com",
+      "path": "/api/checkDailyMissionBonus.php",
+      "layer": "libcurl/tls",
+      "query_keys": [
+        "accountId",
+        "ct",
+        "nonce"
+      ],
+      "request_content_types": [],
+      "statuses": [
+        200
+      ],
+      "calls": 2,
+      "max_request_bytes": 0,
+      "max_response_bytes": 39,
+      "captures": [
+        "20261028T180611886Z",
+        "20261028T192124134Z"
+      ],
+      "fixture": null
+    },
+    {
+      "method": "GET",
+      "host": "api.soulframe.com",
+      "path": "/api/credits.php",
+      "layer": "libcurl/tls",
+      "query_keys": [
+        "accountId",
+        "ct",
+        "nonce"
+      ],
+      "request_content_types": [],
+      "statuses": [
+        200
+      ],
+      "calls": 2,
+      "max_request_bytes": 0,
+      "max_response_bytes": 104,
+      "captures": [
+        "20261028T192124134Z"
+      ],
+      "fixture": null
+    },
+    {
+      "method": "GET",
+      "host": "api.soulframe.com",
+      "path": "/api/drones.php",
+      "layer": "libcurl/tls",
+      "query_keys": [
+        "GetActive",
+        "accountId",
+        "ct",
+        "nonce"
+      ],
+      "request_content_types": [],
+      "statuses": [
+        200
+      ],
+      "calls": 2,
+      "max_request_bytes": 0,
+      "max_response_bytes": 3,
+      "captures": [
+        "20261028T180611886Z",
+        "20261028T192124134Z"
+      ],
+      "fixture": null
+    },
+    {
+      "method": "POST",
+      "host": "api.soulframe.com",
+      "path": "/api/getAlliance.php",
+      "layer": "libcurl/tls",
+      "query_keys": [
+        "accountId",
+        "ct",
+        "nonce"
+      ],
+      "request_content_types": [
+        "application/octet-stream"
+      ],
+      "statuses": [
+        200
+      ],
+      "calls": 2,
+      "max_request_bytes": 169,
+      "max_response_bytes": 0,
+      "captures": [
+        "20261028T180611886Z",
+        "20261028T192124134Z"
+      ],
+      "fixture": null
+    },
+    {
+      "method": "POST",
+      "host": "api.soulframe.com",
+      "path": "/api/getFriends.php",
+      "layer": "libcurl/tls",
+      "query_keys": [
+        "accountId",
+        "ct",
+        "nonce"
+      ],
+      "request_content_types": [
+        "application/octet-stream"
+      ],
+      "statuses": [
+        200
+      ],
+      "calls": 2,
+      "max_request_bytes": 169,
+      "max_response_bytes": 3,
+      "captures": [
+        "20261028T180611886Z",
+        "20261028T192124134Z"
+      ],
+      "fixture": null
+    },
+    {
+      "method": "GET",
+      "host": "api.soulframe.com",
+      "path": "/api/getIgnoredUsers.php",
+      "layer": "libcurl/tls",
+      "query_keys": [
+        "accountId",
+        "ct",
+        "nonce"
+      ],
+      "request_content_types": [],
+      "statuses": [
+        200
+      ],
+      "calls": 2,
+      "max_request_bytes": 0,
+      "max_response_bytes": 29,
+      "captures": [
+        "20261028T180611886Z",
+        "20261028T192124134Z"
+      ],
+      "fixture": null
+    },
+    {
+      "method": "GET",
+      "host": "api.soulframe.com",
+      "path": "/api/getShip.php",
+      "layer": "libcurl/tls",
+      "query_keys": [
+        "accountId",
+        "ct",
+        "nonce"
+      ],
+      "request_content_types": [],
+      "statuses": [
+        200
+      ],
+      "calls": 2,
+      "max_request_bytes": 0,
+      "max_response_bytes": 1407,
+      "captures": [
+        "20261028T180611886Z",
+        "20261028T192124134Z"
+      ],
+      "fixture": null
+    },
+    {
+      "method": "POST",
+      "host": "api.soulframe.com",
+      "path": "/api/heartbeat.php",
+      "layer": "libcurl/tls",
+      "query_keys": [
+        "accountId",
+        "ct",
+        "nonce"
+      ],
+      "request_content_types": [
+        "application/octet-stream"
+      ],
+      "statuses": [
+        200
+      ],
+      "calls": 2,
+      "max_request_bytes": 2553,
+      "max_response_bytes": 0,
+      "captures": [
+        "20261028T180611886Z",
+        "20261028T192124134Z"
+      ],
+      "fixture": null
+    },
+    {
+      "method": "GET",
+      "host": "api.soulframe.com",
+      "path": "/api/inbox.php",
+      "layer": "libcurl/tls",
+      "query_keys": [
+        "accountId",
+        "ct",
+        "lastMessage",
+        "nonce"
+      ],
+      "request_content_types": [],
+      "statuses": [
+        200
+      ],
+      "calls": 4,
+      "max_request_bytes": 0,
+      "max_response_bytes": 51,
+      "captures": [
+        "20261028T180611886Z",
+        "20261028T192124134Z"
+      ],
+      "fixture": null
+    },
+    {
+      "method": "GET",
+      "host": "api.soulframe.com",
+      "path": "/api/inventory.php",
+      "layer": "libcurl/tls",
+      "query_keys": [
+        "_a",
+        "accountId",
+        "ct",
+        "nonce",
+        "relics"
+      ],
+      "request_content_types": [],
+      "statuses": [
+        200
+      ],
+      "calls": 3,
+      "max_request_bytes": 0,
+      "max_response_bytes": 10717,
+      "captures": [
+        "20261028T180611886Z",
+        "20261028T192124134Z"
+      ],
+      "fixture": null
+    },
+    {
+      "method": "POST",
+      "host": "api.soulframe.com",
+      "path": "/api/login.php",
+      "layer": "libcurl/tls",
+      "query_keys": [
+        "ct"
+      ],
+      "request_content_types": [
+        "application/octet-stream"
+      ],
+      "statuses": [
+        200
+      ],
+      "calls": 2,
+      "max_request_bytes": 2809,
+      "max_response_bytes": 1213,
+      "captures": [
+        "20261028T180611886Z",
+        "20261028T192124134Z"
+      ],
+      "fixture": null
+    },
+    {
+      "method": "POST",
+      "host": "api.soulframe.com",
+      "path": "/api/missionInventoryUpdate.php",
+      "layer": "libcurl/tls",
+      "query_keys": [
+        "accountId",
+        "ct",
+        "nonce"
+      ],
+      "request_content_types": [
+        "application/octet-stream"
+      ],
+      "statuses": [
+        200
+      ],
+      "calls": 1,
+      "max_request_bytes": 3209,
+      "max_response_bytes": 0,
+      "captures": [
+        "20261028T192124134Z"
+      ],
+      "fixture": null
+    },
+    {
+      "method": "GET",
+      "host": "api.soulframe.com",
+      "path": "/api/surveys.php",
+      "layer": "libcurl/tls",
+      "query_keys": [
+        "accountId",
+        "ct",
+        "nonce"
+      ],
+      "request_content_types": [],
+      "statuses": [
+        200
+      ],
+      "calls": 2,
+      "max_request_bytes": 0,
+      "max_response_bytes": 19,
+      "captures": [
+        "20261028T180611886Z",
+        "20261028T192124134Z"
+      ],
+      "fixture": null
+    },
+    {
+      "method": "POST",
+      "host": "api.soulframe.com",
+      "path": "/api/updateChallengeProgress.php",
+      "layer": "libcurl/tls",
+      "query_keys": [
+        "accountId",
+        "ct",
+        "nonce"
+      ],
+      "request_content_types": [
+        "application/octet-stream"
+      ],
+      "statuses": [
+        200
+      ],
+      "calls": 1,
+      "max_request_bytes": 297,
+      "max_response_bytes": 0,
+      "captures": [
+        "20261028T180611886Z"
+      ],
+      "fixture": null
+    },
+    {
+      "method": "GET",
+      "host": "api.soulframe.com",
+      "path": "/cdn/worldState.php",
+      "layer": "libcurl/tls",
+      "query_keys": [
+        "l"
+      ],
+      "request_content_types": [],
+      "statuses": [
+        200
+      ],
+      "calls": 3,
+      "max_request_bytes": 0,
+      "max_response_bytes": 15684,
+      "captures": [
+        "20261028T180611886Z",
+        "20261028T192124134Z"
+      ],
+      "fixture": null
+    },
+    {
+      "method": "GET",
+      "host": "api.soulframe.com",
+      "path": "/pay/getSkuCatalog.php",
+      "layer": "libcurl/tls",
+      "query_keys": [
+        "accountId",
+        "ct",
+        "nonce"
+      ],
+      "request_content_types": [],
+      "statuses": [
+        200
+      ],
+      "calls": 2,
+      "max_request_bytes": 0,
+      "max_response_bytes": 2735,
+      "captures": [
+        "20261028T180611886Z",
+        "20261028T192124134Z"
+      ],
+      "fixture": null
+    },
+    {
+      "method": "POST",
+      "host": "api.soulframe.com",
+      "path": "/stats/upload.php",
+      "layer": "libcurl/tls",
+      "query_keys": [
+        "accountId",
+        "ct",
+        "nonce"
+      ],
+      "request_content_types": [
+        "application/octet-stream"
+      ],
+      "statuses": [
+        200
+      ],
+      "calls": 4,
+      "max_request_bytes": 3577,
+      "max_response_bytes": 0,
+      "captures": [
+        "20261028T192124134Z"
+      ],
+      "fixture": null
+    },
+    {
+      "method": "GET",
+      "host": "api.soulframe.com",
+      "path": "/stats/view.php",
+      "layer": "libcurl/tls",
+      "query_keys": [
+        "accountId",
+        "ct",
+        "id",
+        "nonce"
+      ],
+      "request_content_types": [],
+      "statuses": [
+        200
+      ],
+      "calls": 3,
+      "max_request_bytes": 0,
+      "max_response_bytes": 1784,
+      "captures": [
+        "20261028T180611886Z",
+        "20261028T192124134Z"
+      ],
+      "fixture": null
+    },
+    {
+      "method": "GET",
+      "host": "arbiter.soulframe.com",
+      "path": "/api/hub",
+      "layer": "libcurl/tls",
+      "query_keys": [
+        "accountId",
+        "level",
+        "regionId",
+        "version"
+      ],
+      "request_content_types": [],
+      "statuses": [
+        200
+      ],
+      "calls": 1,
+      "max_request_bytes": 0,
+      "max_response_bytes": 26,
+      "captures": [
+        "20261028T192124134Z"
+      ],
+      "fixture": null
+    },
+    {
+      "method": "GET",
+      "host": "content.soulframe.com",
+      "path": "/0/<asset path>!<hash>",
+      "layer": "winhttp",
+      "query_keys": [],
+      "request_content_types": [],
+      "statuses": [
+        200,
+        null
+      ],
+      "calls": 358,
+      "max_request_bytes": 0,
+      "max_response_bytes": 935,
+      "captures": [
+        "20261028T180611886Z",
+        "20261028T192124134Z"
+      ],
+      "fixture": null
+    },
+    {
+      "method": "GET",
+      "host": "origin.soulframe.com",
+      "path": "/origin/<hex32>/0/H.Cache.bin!E_---------------------w",
+      "layer": "winhttp",
+      "query_keys": [],
+      "request_content_types": [],
+      "statuses": [
+        200
+      ],
+      "calls": 2,
+      "max_request_bytes": 0,
+      "max_response_bytes": 627,
+      "captures": [
+        "20261028T180611886Z",
+        "20261028T192124134Z"
+      ],
+      "fixture": "fixtures/origin/H.Cache.bin"
+    }
+  ]
+}
