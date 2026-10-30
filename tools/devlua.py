@@ -22,7 +22,7 @@ COMPILER = next((p for p in (os.path.join(HERE, 'luau', 'luau-compile.exe'),
 TESTER = os.path.join(WORKSPACE, 'target', 'x', 'corpus', 'out', 'SF', 'Scripts', 'Bosses', 'BossFightTester.lua')
 ENEMIES = os.path.join(HERE, '..', 'gamedata', 'enemy_types.json')
 LIBRARY = os.path.join(HERE, '..', 'dev', 'dev.lua')
-COPY = os.path.join(os.environ.get('USERPROFILE', ''), 'SoulframePrivate')
+COPY = os.environ.get('SF_COPY') or os.path.join(os.environ.get('USERPROFILE', ''), 'SoulframePrivate')  # SF_COPY: server_gui.pyw
 OUT = os.path.join(COPY if os.path.exists(os.path.join(COPY, 'sf_bootstrap.dll')) else
                    os.path.join(HERE, '..', 'bootstrap', 'target', 'release'), 'dev.luac')
 NO_WINDOW = getattr(subprocess, 'CREATE_NO_WINDOW', 0)  # no console flash when the GUI (devgui.pyw) compiles

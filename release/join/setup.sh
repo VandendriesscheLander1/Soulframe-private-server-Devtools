@@ -2,10 +2,12 @@
 # Linux version of setup.cmd (Arch, Ubuntu/Debian): a private copy of Soulframe that runs in Wine as its own user
 # "sfplay", and an nftables rule so that user can only reach the host in sf-server.txt (and loopback).
 # Your real game is only read (copied), never changed or started.
-# Usage: bash setup.sh [folder with Soulframe.x64.exe]     (asks for sudo)
+# Usage: bash setup.sh [folder with Soulframe.x64.exe] [where the copy goes: .../SoulframePrivate]     (asks for sudo)
+#        The copy is owned by sfplay with your group allowed in, so you can reach it (unlike under /home/sfplay).
 # Undo:  sudo systemctl disable --now sf-copy-firewall; sudo userdel -r sfplay;
 #        sudo rm /etc/sf-copy.nft /etc/systemd/system/sf-copy-firewall.service /usr/local/bin/sf-play \
 #          /etc/sysctl.d/60-sf-server.conf /etc/sudoers.d/sf-play
+#        and delete the copy's SoulframePrivate folder if you put it somewhere else
 set -euo pipefail
 P16H6=3be7694b589a7e2ae92a53b3e26ed8c3bcfac8c34ff25d69045df374b35e4765  # Soulframe.x64.exe, build 2026.10.08.15.20
 [[ $EUID -eq 0 ]] || exec sudo bash "$0" "$@"
@@ -14,7 +16,9 @@ myhome=$(getent passwd "$me" | cut -d: -f6)
 here=$(cd "$(dirname "$0")" && pwd)
 user=sfplay
 home=/home/$user
-dest=$home/SoulframePrivate
+dest=$(realpath -m "${2:-$home/SoulframePrivate}")
+# Everything in it is chowned to sfplay below, so it must be a folder of its own, never one of yours.
+[[ $(basename "$dest") == SoulframePrivate ]] || { echo "The copy's folder must be named SoulframePrivate (got $dest)."; exit 1; }
 as_user() { sudo -u "$user" env HOME="$home" WINEPREFIX="$home/.wine" WINEDEBUG=-all "$@"; }
 
 # Wine resolves names inside the game, and the firewall blocks DNS for it, so the copy gets the IP, not a name.
@@ -69,6 +73,10 @@ fi
 cp "$bin/sf-launch.exe" "$bin/sf_bootstrap.dll" "$dest"
 echo "$ip" > "$dest/sf-server.txt"
 chown -R "$user:" "$home"
+chown -R "$user:$(id -gn "$me")" "$dest"
+chmod -R g+rwX "$dest"
+as_user test -w "$dest/Soulframe.x64.exe" ||
+  { echo "$user can't reach $dest: every folder above it needs o+x (e.g. chmod o+x on your home folder), or pick another place."; exit 1; }
 
 # Wine prefix with DXVK (the game is DirectX 11). DXVK is pinned and checked here: winetricks reads the latest version
 # from the GitHub API and builds a broken URL (.../download/v/dxvk-.tar.gz) when that answer doesn't parse.
@@ -124,7 +132,8 @@ if sudo -u "$user" timeout 5 bash -c 'exec 3<>/dev/tcp/1.1.1.1/443' 2>/dev/null;
   exit 1
 fi
 
-install -m755 "$here/play.sh" /usr/local/bin/sf-play
+sed "s|/home/sfplay/SoulframePrivate|$dest|" "$here/play.sh" > /usr/local/bin/sf-play
+chmod 755 /usr/local/bin/sf-play
 # For the GUI (server_gui.pyw / the AppImage), which has no terminal to ask for sudo in: the server binds ports 80
 # and 443 as you, and sf-play's "sudo -u sfplay" needs no password (sfplay can do less than you can).
 echo 'net.ipv4.ip_unprivileged_port_start=80' > /etc/sysctl.d/60-sf-server.conf
