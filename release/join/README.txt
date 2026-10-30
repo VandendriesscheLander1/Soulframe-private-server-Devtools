@@ -1,21 +1,25 @@
 Soulframe private server: joining
 =================================
 
+Use this folder from the zip you were sent, not release\join from the repo. It must contain sf-server.txt,
+sf-launch.exe and sf_bootstrap.dll. For now you run the server yourself: it's the sf-host folder next to this one.
+
 What you need
+- Python 3.12+ (python.org; tick "Add to PATH") for the server in sf-host.
 - Soulframe installed and on build P16H6 (2026.10.08). Setup checks this and stops if it doesn't match.
 - About 13 GB free disk space for a separate copy of the game.
-- If the host told you to: Tailscale or ZeroTier, joined to their network.
 
 Setup (once)
 1. Close Soulframe and its launcher.
 2. Double-click setup.cmd and say yes to the admin prompt.
    It copies your install to %USERPROFILE%\SoulframePrivate. Your real install is only read.
    Steam/Epic or another install folder? It will ask for the folder.
-   It then adds Windows Firewall rules so that copy can reach the host's server and nothing else.
+   It then adds Windows Firewall rules so that copy can reach only the server on your own PC.
 
 Play
-- Double-click SoulframePrivate\sf-launch.exe.
-- Log in with a made-up email and password. Never use your Digital Extremes login: the host's server sees it.
+- First double-click sf-host\host.cmd and leave that window open (it's the server).
+- Then double-click SoulframePrivate\sf-launch.exe.
+- Log in with a made-up email and password. Never use your Digital Extremes login: the server stores what you type.
 - Don't run the private copy and your real Soulframe at the same time.
 - Never start Tools\Launcher.exe in the copy (it would try to update it; the firewall blocks it anyway).
 

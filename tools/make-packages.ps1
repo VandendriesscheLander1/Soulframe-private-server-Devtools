@@ -1,7 +1,7 @@
 # Build the two folders to hand out (Phase 7): dist\sf-host (the server, for whoever hosts) and dist\sf-join (for players).
-# Usage: tools\make-packages.ps1 -Server <host address players use, e.g. a Tailscale 100.x IP>
+# Usage: tools\make-packages.ps1 [-Server <address>]  (default 127.0.0.1: each player runs the server on their own PC)
 # Neither folder contains game files. sf-host does contain data extracted from the game (soulframe-pipeline): private use only.
-param([Parameter(Mandatory)][string]$Server)
+param([string]$Server = '127.0.0.1')
 $ErrorActionPreference = 'Stop'
 $root = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $dist = Join-Path $root 'dist'

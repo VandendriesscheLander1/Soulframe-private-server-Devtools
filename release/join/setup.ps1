@@ -17,7 +17,8 @@ if (-not $admin) {
 }
 
 $here = $PSScriptRoot
-$server = (Get-Content "$here\sf-server.txt" -TotalCount 1).Trim()
+if (-not (Test-Path -LiteralPath "$here\sf-server.txt")) { throw "sf-server.txt is missing next to setup.ps1. Use the sf-join folder from the host (tools\make-packages.ps1), not release\join from the repo." }
+$server = (Get-Content -LiteralPath "$here\sf-server.txt" -TotalCount 1).Trim()
 $ip = if ($server -as [ipaddress]) { $server } else {
     ([Net.Dns]::GetHostAddresses($server) | Where-Object AddressFamily -eq 'InterNetwork' | Select-Object -First 1).IPAddressToString
 }
@@ -39,7 +40,7 @@ if (-not (Test-Path "$Dest\Soulframe.x64.exe")) {
 }
 if ((Get-FileHash "$Dest\Soulframe.x64.exe").Hash.ToLower() -ne $P16H6) { throw "$Dest is not build P16H6." }
 
-Copy-Item "$here\sf-launch.exe", "$here\sf_bootstrap.dll", "$here\sf-server.txt" $Dest -Force
+Copy-Item -LiteralPath "$here\sf-launch.exe", "$here\sf_bootstrap.dll", "$here\sf-server.txt" $Dest -Force
 & "$here\isolate-build.ps1" -Path $Dest -Server $ip
 ""
 "Done. Play: double-click $Dest\sf-launch.exe (never Tools\Launcher.exe, never with your real Soulframe open)."
